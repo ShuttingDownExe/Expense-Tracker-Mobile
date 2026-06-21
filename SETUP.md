@@ -63,13 +63,56 @@ environment and choose whether to distribute.
 
 Repository secrets:
 
-All three secrets are **base64-encoded** file contents (`base64 -i <file>`):
+Repository secrets — base64 of a file (`base64 -i <file>`):
 
 | Secret | Source file |
 |--------|-------------|
 | `GOOGLE_SERVICES_JSON` | `android/app/google-services.json` |
 | `FIREBASE_OPTIONS_DART` | `lib/firebase_options.dart` |
 | `FIREBASE_SERVICE_ACCOUNT` | service-account JSON with the **Firebase App Distribution Admin** role |
+| `ANDROID_KEYSTORE` | the release `.jks` keystore |
+
+Repository secrets — plain values (release keystore credentials):
+
+| Secret | Value |
+|--------|-------|
+| `ANDROID_KEYSTORE_PASSWORD` | keystore store password |
+| `ANDROID_KEY_ALIAS` | key alias (e.g. `upload`) |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+### Release signing (required for Google sign-in on distributed builds)
+
+Google Sign-In authenticates the app by package name + signing SHA-1, so
+distributed builds must be signed with a **stable** key whose SHA-1 is
+registered in Firebase (the debug key differs per machine, including CI runners).
+
+1. Generate a keystore (keep it safe and out of git):
+   ```bash
+   keytool -genkey -v -keystore ~/expense-tracker-upload.jks \
+     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Get its fingerprints and register **SHA-1** (and SHA-256) on the
+   `com.expensetracker.expense_tracker` app in Firebase Console:
+   ```bash
+   keytool -list -v -keystore ~/expense-tracker-upload.jks -alias upload
+   ```
+3. Re-download `google-services.json` (now includes the new OAuth client) and
+   update the `GOOGLE_SERVICES_JSON` secret.
+4. Add the four `ANDROID_*` secrets above (`base64 -i ~/expense-tracker-upload.jks`
+   for `ANDROID_KEYSTORE`).
+
+For a **signed release build locally**, create `android/key.properties`
+(git-ignored):
+
+```properties
+storeFile=/absolute/path/to/expense-tracker-upload.jks
+storePassword=…
+keyAlias=upload
+keyPassword=…
+```
+
+Without `key.properties`, release builds fall back to debug signing (fine for
+local testing, not for Google sign-in).
 
 Testers are the **`uat-testers`** group in Firebase Console → App Distribution.
 The current release APK is debug-signed, which App Distribution accepts — no
