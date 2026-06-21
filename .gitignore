@@ -48,8 +48,11 @@ app.*.map.json
 **/google-services.json
 **/GoogleService-Info.plist
 lib/firebase_options.dart
+service-account.json
 
 # Environment files
 .env
 .env.*
 !.env.example
+
+

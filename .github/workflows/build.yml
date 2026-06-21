@@ -1,13 +1,19 @@
 name: Build APK
 
-# Manually trigger a build for a chosen environment. `test` and `prod` map to
-# the hosted App Hosting backends and HTTPS; email sign-in is on for test and
-# off for prod (see lib/config/app_config.dart).
+# Branch → environment mapping:
+#   push to UAT  → test build, distributed to the uat-testers group
+#   push to main → prod build (artifact only; not auto-distributed to UAT)
+# workflow_dispatch lets you build either env manually and choose distribution.
+#
+# `test`/`prod` map to the hosted App Hosting backends + HTTPS; email sign-in is
+# on for test and off for prod (see lib/config/app_config.dart).
 #
 # Only GitHub's own first-party actions (actions/*) are used. Flutter is
 # installed from Google's official release tarball and distribution uses
 # Google's official Firebase CLI — no third-party actions.
 on:
+  push:
+    branches: [UAT, main]
   workflow_dispatch:
     inputs:
       environment:
@@ -20,6 +26,11 @@ on:
         type: boolean
         default: true
 
+# Cancel an in-progress build if the same branch is pushed again.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FLUTTER_VERSION: '3.38.7'
   FIREBASE_APP_ID: '1:202069546642:android:a31694bec7b0ca8bfc784b'
@@ -29,6 +40,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Decide the target env + whether to distribute, from the branch (for
+      # pushes) or the manual inputs (for workflow_dispatch).
+      - name: Resolve build environment
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_ENV="${{ inputs.environment }}"
+            DISTRIBUTE="${{ inputs.distribute }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            TARGET_ENV="prod"
+            DISTRIBUTE="false"
+          else
+            TARGET_ENV="test"
+            DISTRIBUTE="true"
+          fi
+          echo "TARGET_ENV=$TARGET_ENV" >> "$GITHUB_ENV"
+          echo "DISTRIBUTE=$DISTRIBUTE" >> "$GITHUB_ENV"
+          echo "Resolved env=$TARGET_ENV distribute=$DISTRIBUTE (event=${{ github.event_name }}, ref=${{ github.ref_name }})"
 
       - uses: actions/setup-java@v4
         with:
@@ -83,13 +113,13 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build APK (${{ inputs.environment }})
-        run: flutter build apk --release --dart-define=APP_ENV=${{ inputs.environment }}
+      - name: Build APK (${{ env.TARGET_ENV }})
+        run: flutter build apk --release --dart-define=APP_ENV="$TARGET_ENV"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ inputs.environment }}-apk
+          name: app-${{ env.TARGET_ENV }}-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
       # Distribute via Google's official Firebase CLI (firebase-tools), authed
@@ -97,7 +127,7 @@ jobs:
       # role. Requires the `uat-testers` group in Firebase App Distribution.
       # FIREBASE_SERVICE_ACCOUNT is base64 of the service-account JSON.
       - name: Distribute to uat-testers
-        if: ${{ inputs.distribute }}
+        if: ${{ env.DISTRIBUTE == 'true' }}
         env:
           SERVICE_ACCOUNT_B64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
@@ -109,7 +139,7 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
             --groups uat-testers \
-            --release-notes "${{ inputs.environment }} build · ${{ github.sha }}"
+            --release-notes "$TARGET_ENV build · ${{ github.sha }}"
 
 # NOTE: release builds are currently signed with the debug key (Flutter's
 # default release signingConfig). For Play Store distribution, add a real
