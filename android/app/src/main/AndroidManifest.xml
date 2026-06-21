@@ -1,10 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Cleartext HTTP (for the local dev API) is enabled only in debug builds
+         via src/debug/AndroidManifest.xml. Release (test/prod) builds enforce
+         HTTPS by default. -->
     <application
         android:label="expense_tracker"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

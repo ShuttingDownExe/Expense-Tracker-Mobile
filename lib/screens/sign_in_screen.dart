@@ -78,42 +78,56 @@ class _SignInScreenState extends State<SignInScreen> {
                     textAlign: TextAlign.center, style: AppText.screenTitle),
                 const SizedBox(height: 6),
                 Text(
-                  _isRegister ? 'Create your account' : 'Welcome back',
+                  widget.emailAuthEnabled
+                      ? (_isRegister ? 'Create your account' : 'Welcome back')
+                      : 'Sign in to continue',
                   textAlign: TextAlign.center,
                   style: AppText.label(13, AppColors.textMuted),
                 ),
                 const SizedBox(height: 36),
-                _field(_emailController, 'Email',
-                    keyboardType: TextInputType.emailAddress),
-                const SizedBox(height: 12),
-                _field(_passwordController, 'Password', obscure: true),
+
+                // Email/password block — dev/tester builds only.
+                if (widget.emailAuthEnabled) ...[
+                  _field(_emailController, 'Email',
+                      keyboardType: TextInputType.emailAddress),
+                  const SizedBox(height: 12),
+                  _field(_passwordController, 'Password', obscure: true),
+                ],
+
                 if (_error != null) ...[
                   const SizedBox(height: 14),
                   Text(_error!,
                       textAlign: TextAlign.center,
                       style: AppText.label(12, AppColors.red)),
                 ],
-                const SizedBox(height: 24),
-                _submitButton(),
-                const SizedBox(height: 18),
-                _orDivider(),
-                const SizedBox(height: 18),
+
+                if (widget.emailAuthEnabled) ...[
+                  const SizedBox(height: 24),
+                  _submitButton(),
+                  const SizedBox(height: 18),
+                  _orDivider(),
+                  const SizedBox(height: 18),
+                ],
+
                 _googleButton(),
-                const SizedBox(height: 14),
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => setState(() {
-                            _isRegister = !_isRegister;
-                            _error = null;
-                          }),
-                  child: Text(
-                    _isRegister
-                        ? 'Have an account? Sign in'
-                        : 'New here? Create an account',
-                    style: AppText.label(13, AppColors.gold),
+
+                if (widget.emailAuthEnabled) ...[
+                  const SizedBox(height: 14),
+                  TextButton(
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() {
+                              _isRegister = !_isRegister;
+                              _error = null;
+                            }),
+                    child: Text(
+                      _isRegister
+                          ? 'Have an account? Sign in'
+                          : 'New here? Create an account',
+                      style: AppText.label(13, AppColors.gold),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
