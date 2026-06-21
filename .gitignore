@@ -55,4 +55,9 @@ service-account.json
 .env.*
 !.env.example
 
+# Android release signing
+android/key.properties
+**/*.jks
+**/*.keystore
+
 
