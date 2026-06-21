@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes lineIn { to { stroke-dashoffset:0; } }
+    @keyframes barIn { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+    @keyframes pulseRing { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.15)} }
+  </style>
+</helmet>
+
+<div style="background:#CAC6BE; min-width:100%; min-height:100vh; width:max-content; box-sizing:border-box; padding:52px; font-family:'Cormorant Garamond',serif;">
+
+  <!-- Page Header -->
+  <div style="margin-bottom:44px;">
+    <div style="font-size:15px; color:#888; text-transform:uppercase; letter-spacing:3px; margin-bottom:6px;">Selected Direction · Clean Stack</div>
+    <div style="font-size:41px; font-weight:700; color:#1A1612; letter-spacing:-0.5px; line-height:1;">Expense Tracker</div>
+    <div style="font-size:19px; color:#7A7570; margin-top:8px; display:flex; gap:16px; align-items:center;">
+      <span>Screen 1 — Dashboard</span>
+      <span style="width:4px;height:4px;border-radius:50%;background:#C9A84C;display:inline-block;"></span>
+      <span>Dark · Gold #C9A84C · ₹ INR · Cormorant Garamond</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FRAMES ROW ═══════════════ -->
+  <div style="display:flex; gap:52px; align-items:flex-start;">
+
+    <!-- ─── FRAME A: CLEAN STACK ─── -->
+    <div style="flex:none; width:280px; ">
+      
+
+      <div style="width:280px;height:594px;background:#000000;border-radius:36px;border:1.5px solid #2A2520;overflow:hidden;display:flex;flex-direction:column;">
+        <!-- Dynamic Island -->
+        <div style="height:26px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;flex-shrink:0;">
+          <div style="width:82px;height:14px;background:#000;border-radius:20px;"></div>
+        </div>
+        <!-- Status bar -->
+        <div style="height:18px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;">
+          <span style="font-size:13px;color:#666;">9:41</span>
+          <div style="display:flex;gap:3px;align-items:center;">
+            <div style="width:3px;height:5px;background:#555;border-radius:1px;"></div>
+            <div style="width:3px;height:7px;background:#555;border-radius:1px;"></div>
+            <div style="width:3px;height:9px;background:#666;border-radius:1px;"></div>
+            <div style="width:14px;height:7px;border:1px solid #444;border-radius:2px;margin-left:4px;display:flex;align-items:center;padding:1px;">
+              <div style="width:60%;height:100%;background:#666;border-radius:1px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div style="flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;gap:8px;overflow:hidden;">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div>
+              <div style="font-size:13px;color:#555;text-transform:uppercase;letter-spacing:1.5px;">Thu, Jun 18</div>
+              <div style="font-size:23px;font-weight:700;color:#F0EDE8;margin-top:1px;">Dashboard</div>
+            </div>
+            <div style="width:30px;height:30px;border-radius:50%;background:#111111;border:1.5px solid #C9A84C40;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:19px;color:#C9A84C;">A</span>
+            </div>
+          </div>
+
+          <!-- Budget Widget -->
+          <div style="flex-shrink:0;border:1px solid #1C1C1C;border-radius:14px;padding:12px 13px;background:#0D0D0D;box-shadow:0 4px 28px rgba(0,0,0,0.7),0 0 40px rgba(201,168,76,0.08),inset 0 1px 0 rgba(255,255,255,0.05);position:relative;animation:fadeUp 0.5s ease-out 0.1s both;">
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="font-size:12px;color:#C9A84C;text-transform:uppercase;letter-spacing:1.5px;">Spent Today</span>
+              <span style="font-size:12px;color:#444;">Budget ₹5,000</span>
+            </div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:300;color:#C9A84C;line-height:1.05;animation:fadeUp 0.5s ease-out 0.2s both;">₹ 2,840</div>
+            <div style="font-size:14px;color:#4CAF82;margin-top:4px;">↓ ₹ 2,160 remaining</div>
+            <div style="margin-top:9px;height:3px;background:#1A1A1A;border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:57%;background:linear-gradient(to right,#A07A30,#C9A84C);border-radius:2px;transform-origin:left center;animation:barIn 0.9s ease-out 0.5s both;"></div>
+            </div>
+            <div style="font-size:12px;color:#444;margin-top:3px;">57% of daily budget used</div>
+          </div>
+
+          <!-- Graph Widget -->
+          <div style="flex-shrink:0;border:1px solid #1C1C1C;border-radius:14px;padding:10px 12px;background:#0D0D0D;box-shadow:0 4px 28px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.05);position:relative;animation:fadeUp 0.5s ease-out 0.25s both;">
+            
+            <div style="font-size:14px;color:#666;margin-bottom:5px;">This Week</div>
+            <svg width="220" height="46" style="display:block;overflow:visible;">
+              <defs>
+                <linearGradient id="gf" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.22"></stop>
+                  <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"></stop>
+                </linearGradient>
+              </defs>
+              <line x1="0" y1="3" x2="220" y2="3" stroke="#2A2520" stroke-width="0.8" stroke-dasharray="3,3"></line>
+              <polygon points="6,36 42,14 78,29 114,23 150,39 186,45 220,32 220,46 6,46" fill="url(#gf)"></polygon>
+              <polyline points="6,36 42,14 78,29 114,23 150,39 186,45 220,32" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke-dasharray:500;stroke-dashoffset:500;animation:lineIn 1.3s ease-out 0.6s forwards;"></polyline>
+              <circle cx="6" cy="36" r="2.5" fill="#C9A84C"></circle>
+              <circle cx="42" cy="14" r="2.5" fill="#C9A84C"></circle>
+              <circle cx="78" cy="29" r="2.5" fill="#C9A84C"></circle>
+              <circle cx="114" cy="23" r="5" fill="none" stroke="#C9A84C" stroke-width="1.5" style="animation:pulseRing 2s ease-in-out 1.5s infinite;"></circle>
+              <circle cx="114" cy="23" r="2.5" fill="#C9A84C"></circle>
+              <circle cx="150" cy="39" r="2" fill="#3A3530"></circle>
+              <circle cx="186" cy="45" r="2" fill="#3A3530"></circle>
+              <circle cx="220" cy="32" r="2" fill="#3A3530"></circle>
+            </svg>
+            <div style="display:flex;justify-content:space-between;padding:0 3px;margin-top:2px;">
+              <span style="font-size:12px;color:#888;">M</span>
+              <span style="font-size:12px;color:#888;">T</span>
+              <span style="font-size:12px;color:#888;">W</span>
+              <span style="font-size:12px;color:#C9A84C;font-weight:700;">T</span>
+              <span style="font-size:12px;color:#333;">F</span>
+              <span style="font-size:12px;color:#333;">S</span>
+              <span style="font-size:12px;color:#333;">S</span>
+            </div>
+          </div>
+
+          <!-- Calendar Widget -->
+          <div style="flex:1;border:1px solid #1C1C1C;border-radius:14px;padding:10px 12px;background:#0D0D0D;box-shadow:0 4px 28px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.05);position:relative;animation:fadeUp 0.5s ease-out 0.4s both;">
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+              <span style="font-size:17px;font-weight:700;color:#F0EDE8;">June 2026</span>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:#E05555;"></div>
+                <span style="font-size:12px;color:#777;">5 over budget</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;">
+              <sc-for list="{{ calHdr }}" as="h" hint-placeholder-count="7">
+                <div style="height:15px;display:flex;align-items:center;justify-content:center;">
+                  <span style="font-size:12px;color:#444;">{{ h }}</span>
+                </div>
+              </sc-for>
+              <sc-for list="{{ cells }}" as="cell" hint-placeholder-count="35">
+                <div style="height:19px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:{{ cell.bg }};outline:{{ cell.ring }};outline-offset:-1px;">
+                  <span style="font-size:12px;color:{{ cell.c }};font-weight:{{ cell.fw }};">{{ cell.d }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:7px;align-items:center;">
+              <div style="display:flex;align-items:center;gap:4px;"><div style="width:5px;height:5px;border-radius:50%;background:#E05555;"></div><span style="font-size:12px;color:#555;">Over</span></div>
+              <div style="display:flex;align-items:center;gap:4px;"><div style="width:5px;height:5px;border-radius:50%;background:#C9A84C;"></div><span style="font-size:12px;color:#555;">Today</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Nav A -->
+        <div style="height:64px;background:#0A0A0A;border-top:1px solid #1A1A1A;display:flex;align-items:center;justify-content:space-around;padding:0 8px;flex-shrink:0;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <span style="font-size:23px;color:#C9A84C;line-height:1;">⌂</span>
+            <span style="font-size:11px;color:#C9A84C;">Home</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <span style="font-size:19px;color:#3A3530;line-height:1;">≋</span>
+            <span style="font-size:11px;color:#3A3530;">Stats</span>
+          </div>
+          <div style="width:40px;height:40px;border-radius:50%;background:#C9A84C;display:flex;align-items:center;justify-content:center;margin-top:-22px;border:2.5px solid #000000;box-shadow:0 0 14px rgba(201,168,76,0.35);">
+            <span style="font-size:30px;color:#141210;font-weight:700;line-height:1;">+</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <span style="font-size:19px;color:#3A3530;line-height:1;">◈</span>
+            <span style="font-size:11px;color:#3A3530;">History</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+            <span style="font-size:18px;color:#3A3530;line-height:1;">○</span>
+            <span style="font-size:11px;color:#3A3530;">You</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;font-size:18px;color:#706B65;line-height:1.6;max-width:280px;">
+        Cards stack uniformly. Predictable scan pattern — each widget gets equal weight. Easy to extend with new widgets.
+      </div>
+    </div>
+
+  <!-- ═══════════════ SCREEN 2 ═══════════════ -->
+  <div style="margin-top:60px;">
+    <div style="margin-bottom:28px;">
+      <div style="font-size:15px;color:#888;text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;">Screen 2 of 2</div>
+      <div style="font-size:35px;font-weight:700;color:#1A1612;">Add New Expense</div>
+      <div style="font-size:18px;color:#7A7570;margin-top:4px;">Shared design — one direction for the input flow</div>
+    </div>
+
+    <!-- Add Expense Phone -->
+    <div style="flex:none;width:280px;">
+      <div style="width:280px;height:594px;background:#000000;border-radius:36px;border:1.5px solid #2A2520;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="height:26px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;flex-shrink:0;">
+          <div style="width:82px;height:14px;background:#000;border-radius:20px;"></div>
+        </div>
+        <div style="height:18px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;flex-shrink:0;">
+          <span style="font-size:13px;color:#666;">9:41</span>
+          <div style="display:flex;gap:3px;align-items:center;">
+            <div style="width:3px;height:5px;background:#555;border-radius:1px;"></div>
+            <div style="width:3px;height:7px;background:#555;border-radius:1px;"></div>
+            <div style="width:3px;height:9px;background:#666;border-radius:1px;"></div>
+            <div style="width:14px;height:7px;border:1px solid #444;border-radius:2px;margin-left:4px;display:flex;align-items:center;padding:1px;">
+              <div style="width:60%;height:100%;background:#666;border-radius:1px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+          <!-- Screen header -->
+          <div style="display:flex;align-items:center;padding:10px 18px 0;flex-shrink:0;position:relative;">
+            <div style="width:28px;height:28px;border-radius:8px;background:#0A0A0A;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:19px;color:#888;">‹</span>
+            </div>
+            <div style="flex:1;text-align:center;font-size:19px;font-weight:700;color:#F0EDE8;">New Expense</div>
+            <div style="width:28px;height:28px;border-radius:8px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:17px;color:#C9A84C;">✓</span>
+            </div>
+          </div>
+
+          <!-- Amount display -->
+          <div style="padding:24px 20px 16px;text-align:center;flex-shrink:0;animation:fadeUp 0.5s ease-out 0.1s both;">
+            <div style="font-size:14px;color:#555;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Amount</div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:6px;">
+              <span style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:300;color:#666;">₹</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-size:58px;font-weight:300;color:#C9A84C;line-height:1;">0</span>
+            </div>
+            <div style="margin-top:10px;height:1px;background:linear-gradient(to right,transparent,#2A2520,transparent);"></div>
+            <div style="font-size:13px;color:#3A3530;margin-top:6px;">Today's budget: ₹5,000 · Used: ₹2,840</div>
+          </div>
+
+          <!-- Category grid -->
+          <div style="padding:0 16px;flex-shrink:0;animation:fadeUp 0.5s ease-out 0.2s both;">
+            <div style="font-size:13px;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">Category</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <sc-for list="{{ cats }}" as="cat" hint-placeholder-count="6">
+                <div style="background:rgba(255,255,255,0.03);border:1px solid #1A1A1A;border-radius:10px;padding:9px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;">
+                  <span style="font-size:25px;line-height:1;">{{ cat.icon }}</span>
+                  <span style="font-size:12px;color:#888;">{{ cat.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- Fields -->
+          <div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:8px;flex:1;animation:fadeUp 0.5s ease-out 0.3s both;">
+            <!-- Description -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid #1A1A1A;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:17px;color:#3A3530;">✎</span>
+              <span style="font-size:15px;color:#3A3530;">Description (optional)</span>
+            </div>
+            <!-- Date -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid #1A1A1A;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:17px;color:#3A3530;">▦</span>
+                <span style="font-size:15px;color:#F0EDE8;">Today, Jun 18 2026</span>
+              </div>
+              <span style="font-size:13px;color:#555;">Change</span>
+            </div>
+          </div>
+
+          <!-- Save button -->
+          <div style="padding:12px 16px 16px;flex-shrink:0;animation:fadeUp 0.5s ease-out 0.4s both;">
+            <div style="background:#C9A84C;border-radius:14px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(201,168,76,0.25);">
+              <span style="font-size:21px;font-weight:700;color:#141210;letter-spacing:0.5px;">Save Expense</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div style="margin-top:14px;font-size:18px;color:#706B65;line-height:1.6;max-width:280px;">
+        Large amount entry at top. Categories prompt quick selection. Minimal fields — only what's needed.
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 540, &quot;height&quot;: 860 }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    const over = [3, 9, 14, 20, 25];
+    const today = 18;
+
+    const calHdr = ['M','T','W','T','F','S','S'];
+
+    const cells = [];
+    for (let i = 0; i < 35; i++) {
+      const d = i + 1;
+      const empty = d > 30;
+      const isOver = !empty && over.includes(d);
+      const isTod = d === today;
+      cells.push({
+        d: empty ? '' : String(d),
+        bg: isTod
+          ? 'rgba(201,168,76,0.18)'
+          : isOver
+          ? 'rgba(224,85,85,0.1)'
+          : 'transparent',
+        c: isTod
+          ? '#C9A84C'
+          : isOver
+          ? '#E05555'
+          : empty
+          ? 'transparent'
+          : '#6A6560',
+        fw: isTod || isOver ? '700' : '400',
+        ring: isTod
+          ? '1px solid rgba(201,168,76,0.4)'
+          : '1px solid transparent',
+      });
+    }
+
+    const cats = [
+      { icon: '🍽', label: 'Food' },
+      { icon: '🚗', label: 'Travel' },
+      { icon: '🛍', label: 'Shop' },
+      { icon: '💡', label: 'Bills' },
+      { icon: '🎬', label: 'Fun' },
+      { icon: '⋯', label: 'Other' },
+    ];
+
+    return {
+      calHdr, cells, cats,
+    };
+  }
+}
+</script>
+</body>
+</html>
