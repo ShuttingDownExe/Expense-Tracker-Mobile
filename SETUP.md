@@ -50,8 +50,16 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.50:3000/api
 
 ## CI & test distribution
 
-`.github/workflows/build.yml` builds a chosen environment (test/prod) on manual
-dispatch and can upload the APK to **Firebase App Distribution** for testers.
+`.github/workflows/build.yml` builds and (for UAT) distributes automatically:
+
+| Trigger | Build | Distributed to `uat-testers`? |
+|---------|-------|-------------------------------|
+| push to `UAT` | test | ✅ yes |
+| push to `main` | prod | ❌ no (artifact only) |
+| manual dispatch | your choice | per the `distribute` toggle |
+
+Manual dispatch (Actions tab → Build APK → Run workflow) lets you build either
+environment and choose whether to distribute.
 
 Repository secrets:
 
