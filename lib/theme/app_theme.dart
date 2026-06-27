@@ -41,10 +41,16 @@ class AppColors {
 class AppText {
   AppText._();
 
+  /// Cormorant Garamond reads small for its nominal size. Roughly DOUBLES the
+  /// previously-rendered sizes: small/body type → 2×size+16 (10→36, 14→44),
+  /// large display type → 2.5×size. Single knob for overall legibility.
+  static double _scaledSize(double size) =>
+      size <= 16 ? size + 10 : size * 1.3;
+
   static TextStyle _base(double size, FontWeight weight, Color color,
       {double? spacing, double? height}) {
     return GoogleFonts.cormorantGaramond(
-      fontSize: size,
+      fontSize: _scaledSize(size),
       fontWeight: weight,
       color: color,
       letterSpacing: spacing,
@@ -57,8 +63,8 @@ class AppText {
       _base(size, FontWeight.w300, AppColors.gold, spacing: -2, height: 1.0);
 
   // Uppercase gold card headings ("SPENT TODAY", "THIS WEEK", "CATEGORY").
-  static final cardHeading = _base(10, FontWeight.w500, AppColors.gold,
-      spacing: 2.5, height: 1.2);
+  static final cardHeading = _base(11, FontWeight.w600, AppColors.gold,
+      spacing: 2, height: 1.2);
 
   static final screenTitle =
       _base(26, FontWeight.w600, AppColors.textPrimary, height: 1.1);

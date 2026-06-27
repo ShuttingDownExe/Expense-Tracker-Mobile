@@ -73,7 +73,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
-      bottomNavigationBar: BottomNav(onAdd: _openAddExpense),
+      floatingActionButton: AddExpenseFab(onTap: _openAddExpense),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: const BottomNav(),
     );
   }
 
@@ -105,7 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   border: Border.all(color: AppColors.borderFaint),
                 ),
                 child: const Icon(Icons.notifications_none,
-                    size: 18, color: AppColors.textMuted),
+                    size: 22, color: AppColors.textMuted),
               ),
               const SizedBox(width: 12),
               // Avatar with gold ring + initial.
