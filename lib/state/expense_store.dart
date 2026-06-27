@@ -190,64 +190,65 @@ class ExpenseStore extends ChangeNotifier {
   }
 
   // ── Sample data so the dashboard renders meaningfully before sign-in ──
+  // Dated relative to today by whole-day offsets so "today" always totals
+  // ₹2,840 (the design headline) regardless of the current weekday/date, and
+  // no non-today entry can ever collide with today.
   List<Expense> _sampleExpenses() {
     final now = DateTime.now();
-    String key(DateTime d) => _dateFmt.format(d);
-    final monday = now.subtract(Duration(days: now.weekday - 1));
-    final firstOfMonth = DateTime(now.year, now.month, 1);
+    String key(int daysAgo) => _dateFmt.format(now.subtract(Duration(days: daysAgo)));
 
     return [
       // Today → ₹2,840 spent (matches the design's headline figure).
       Expense(
           id: 's1',
-          date: key(now),
+          date: key(0),
           description: 'Lunch',
           amount: 480,
-          vendor: 'Food'),
+          vendor: 'food'),
       Expense(
           id: 's2',
-          date: key(now),
+          date: key(0),
           description: 'Cab',
           amount: 360,
-          vendor: 'Travel'),
+          vendor: 'transport'),
       Expense(
           id: 's3',
-          date: key(now),
+          date: key(0),
           description: 'Groceries',
           amount: 2000,
-          vendor: 'Shopping'),
-      // Earlier this week, to shape the weekly graph.
+          vendor: 'groceries'),
+      // Earlier days, to shape the weekly graph.
       Expense(
           id: 's4',
-          date: key(monday),
+          date: key(1),
           description: 'Bills',
           amount: 1200,
-          vendor: 'Bills'),
+          vendor: 'utility'),
       Expense(
           id: 's5',
-          date: key(monday.add(const Duration(days: 1))),
+          date: key(2),
           description: 'Dinner',
           amount: 3600,
-          vendor: 'Food'),
+          vendor: 'dining'),
       Expense(
           id: 's6',
-          date: key(monday.add(const Duration(days: 2))),
+          date: key(3),
           description: 'Pharmacy',
           amount: 900,
-          vendor: 'Health'),
+          vendor: 'medical'),
       // A couple of over-budget days earlier in the month for the calendar.
       Expense(
           id: 's7',
-          date: key(firstOfMonth.add(const Duration(days: 2))),
+          date: key(7),
           description: 'Shopping spree',
           amount: 6200,
-          vendor: 'Shopping'),
+          vendor: 'fashion'),
       Expense(
           id: 's8',
-          date: key(firstOfMonth.add(const Duration(days: 8))),
+          date: key(12),
           description: 'Electronics',
           amount: 7400,
-          vendor: 'Shopping'),
+          vendor: 'entertainment'),
     ];
   }
 

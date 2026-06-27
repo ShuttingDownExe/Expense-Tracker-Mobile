@@ -67,7 +67,7 @@ class _BudgetCardState extends State<BudgetCard>
                 children: [
                   Text('SPENT TODAY', style: AppText.cardHeading),
                   Text('Budget ₹${store.formatInr(budget)}',
-                      style: AppText.label(11, AppColors.textFaint)),
+                      style: AppText.label(11, AppColors.textSecondary)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -85,23 +85,22 @@ class _BudgetCardState extends State<BudgetCard>
                 ],
               ),
               const SizedBox(height: 3),
-              Row(
+              // Wrap so the two segments flow to a second line at larger type
+              // scales instead of overflowing.
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 2,
                 children: [
                   Text('of ₹${store.formatInr(budget)} budget',
-                      style: AppText.label(12, AppColors.textFaint)),
-                  const SizedBox(width: 8),
-                  Container(
-                      width: 3,
-                      height: 3,
-                      decoration: const BoxDecoration(
-                          color: AppColors.textGhost, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
+                      style: AppText.label(12, AppColors.textSecondary)),
                   Text(
                     isOver
                         ? '↑ ₹${store.formatInr(remaining.abs().round())} over budget'
                         : '↓ ₹${store.formatInr(remaining.round())} remaining',
                     style: AppText.label(
-                        12, isOver ? AppColors.red : AppColors.green),
+                        12, isOver ? AppColors.red : AppColors.green,
+                        weight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -131,9 +130,9 @@ class _BudgetCardState extends State<BudgetCard>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('$pctLabel% used',
-                      style: AppText.label(11, AppColors.textGhost)),
+                      style: AppText.label(11, AppColors.textMuted)),
                   Text('${_daysLeftInMonth()} days left',
-                      style: AppText.label(11, AppColors.textGhost)),
+                      style: AppText.label(11, AppColors.textMuted)),
                 ],
               ),
             ],

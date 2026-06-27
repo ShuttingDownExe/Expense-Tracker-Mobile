@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Bottom tab bar with the floating gold "+" FAB that opens the add-expense
-/// flow. Only Home is wired up; the other tabs are visual placeholders that
-/// match the design.
+/// Bottom tab bar: Dashboard and History flanking the central add button.
+/// The "+" button itself is a [AddExpenseFab] placed via
+/// `Scaffold.floatingActionButton` (centerDocked) so its whole area is
+/// tappable — see DashboardScreen.
 class BottomNav extends StatelessWidget {
-  const BottomNav({super.key, required this.onAdd});
-
-  final VoidCallback onAdd;
+  const BottomNav({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +17,10 @@ class BottomNav extends StatelessWidget {
         border: Border(top: BorderSide(color: AppColors.bgSurface2)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          _item(Icons.home_outlined, 'Home', active: true),
-          _item(Icons.bar_chart, 'Stats'),
-          _fab(),
-          _item(Icons.history, 'History'),
-          _item(Icons.person_outline, 'You'),
+          Expanded(child: _item(Icons.home_outlined, 'Dashboard', active: true)),
+          const SizedBox(width: 72), // gap for the docked FAB
+          Expanded(child: _item(Icons.history, 'History')),
         ],
       ),
     );
@@ -36,7 +31,7 @@ class BottomNav extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 22, color: color),
+        Icon(icon, size: 26, color: color),
         const SizedBox(height: 3),
         Text(label,
             style: AppText.label(10, color,
@@ -44,28 +39,41 @@ class BottomNav extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _fab() {
-    return GestureDetector(
-      onTap: onAdd,
-      child: Transform.translate(
-        offset: const Offset(0, -28),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.gold,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.bgBlack, width: 3),
-            boxShadow: [
-              BoxShadow(
-                  color: const Color(0xFFC9A84C).withValues(alpha: 0.35),
-                  blurRadius: 20),
-              const BoxShadow(
-                  color: Color(0x80000000), blurRadius: 16, offset: Offset(0, 4)),
-            ],
+/// The floating gold "+" button that opens the add-expense flow. Rendered as a
+/// 56pt circle with a ripple, a black ring, and the gold glow from the design.
+class AddExpenseFab extends StatelessWidget {
+  const AddExpenseFab({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+              color: const Color(0xFFC9A84C).withValues(alpha: 0.35),
+              blurRadius: 20),
+          const BoxShadow(
+              color: Color(0x80000000), blurRadius: 16, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Material(
+        color: AppColors.gold,
+        shape: const CircleBorder(
+            side: BorderSide(color: AppColors.bgBlack, width: 3)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: const SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(Icons.add, color: Colors.black, size: 28),
           ),
-          child: const Icon(Icons.add, color: Colors.black, size: 24),
         ),
       ),
     );

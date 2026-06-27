@@ -209,7 +209,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: border),
         ),
-        child: Icon(icon, size: 18, color: iconColor),
+        child: Icon(icon, size: 22, color: iconColor),
       ),
     );
   }
@@ -325,9 +325,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(cat.label,
-                style: AppText.label(
-                    12, selected ? AppColors.textPrimary : const Color(0xFF666666))),
+            // Shrink-to-fit so long labels (e.g. "Entertainment") never
+            // overflow the button at larger type scales.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(cat.label,
+                  maxLines: 1,
+                  style: AppText.label(12,
+                      selected ? AppColors.textPrimary : const Color(0xFF666666))),
+            ),
           ],
         ),
       ),
@@ -344,7 +350,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.edit_outlined, size: 16, color: AppColors.textGhost),
+          const Icon(Icons.edit_outlined, size: 19, color: AppColors.textGhost),
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
@@ -383,7 +389,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             child: Row(
               children: [
                 const Icon(Icons.calendar_today_outlined,
-                    size: 16, color: AppColors.textGhost),
+                    size: 19, color: AppColors.textGhost),
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(label,
@@ -394,7 +400,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          Text('Set automatically',
+          Text('Auto',
               style: AppText.label(12, AppColors.textGhost)),
         ],
       ),
