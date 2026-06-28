@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/budget_calendar.dart';
 import '../widgets/budget_card.dart';
+import '../widgets/glass_loading.dart';
 import '../widgets/weekly_graph.dart';
 import 'add_expense_screen.dart';
 
@@ -45,27 +46,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgBlack,
+      // Let the body scroll behind the floating glass pill so its blur has
+      // content to frost.
+      extendBody: true,
       body: SafeArea(
         bottom: false,
         child: ListenableBuilder(
           listenable: widget.store,
           builder: (context, _) {
-            return Column(
+            final store = widget.store;
+            return Stack(
               children: [
-                _header(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
-                    child: Column(
-                      children: [
-                        BudgetCard(store: widget.store),
-                        const SizedBox(height: 14),
-                        WeeklyGraph(store: widget.store),
-                        const SizedBox(height: 14),
-                        BudgetCalendar(store: widget.store),
-                      ],
+                Column(
+                  children: [
+                    _header(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        // Extra bottom padding so the last card clears the
+                        // floating glass pill.
+                        padding: const EdgeInsets.fromLTRB(22, 14, 22, 130),
+                        child: Column(
+                          children: [
+                            BudgetCard(store: store),
+                            const SizedBox(height: 14),
+                            WeeklyGraph(store: store),
+                            const SizedBox(height: 14),
+                            BudgetCalendar(store: store),
+                          ],
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+                // Error banner (when a fetch failed) pinned below the header.
+                if (!store.loading && store.error != null)
+                  Positioned(
+                    top: 8,
+                    left: 16,
+                    right: 16,
+                    child: GlassErrorBanner(
+                      message: store.error!,
+                      onRetry: () => store.load(),
+                    ),
+                  ),
+                // Frosted loading overlay, fading out once data arrives.
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: store.loading
+                        ? const GlassLoadingOverlay()
+                        : const SizedBox.shrink(),
                   ),
                 ),
               ],
@@ -73,9 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
-      floatingActionButton: AddExpenseFab(onTap: _openAddExpense),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const BottomNav(),
+      bottomNavigationBar: BottomNav(onAdd: _openAddExpense),
     );
   }
 

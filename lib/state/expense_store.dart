@@ -28,6 +28,7 @@ class ExpenseStore extends ChangeNotifier {
   // in which case the store falls back to deriving figures from [_expenses].
   double? _todayTotalRemote;
   Map<int, double>? _weeklyRemote;
+  Map<int, double>? _monthlyRemote; // day-of-month (1-based) → total
   String? _timezone; // resolved device IANA timezone, e.g. 'Asia/Kolkata'
 
   List<Expense> get expenses => List.unmodifiable(_expenses);
@@ -77,17 +78,24 @@ class ExpenseStore extends ChangeNotifier {
           _api.fetchExpenses(),
           _api.fetchTodayTotal(tz: tz),
           _api.fetchWeeklyTotals(tz: tz),
+          _api.fetchMonthlyTotals(tz: tz),
         ]);
         _expenses = results[0] as List<Expense>;
         _todayTotalRemote = results[1] as double;
         _weeklyRemote = results[2] as Map<int, double>;
+        _monthlyRemote = results[3] as Map<int, double>;
       }
     } on ApiException catch (e) {
+      // Surface the failure (the dashboard shows a glass error banner) instead
+      // of masking a network problem behind misleading sample/₹0 figures.
       _error = e.message;
-      _expenses = _sampleExpenses(); // graceful visual fallback
-    } catch (_) {
-      _error = 'Could not reach the server';
-      _expenses = _sampleExpenses();
+      if (!_api.hasAuth) _expenses = _sampleExpenses();
+    } catch (e, st) {
+      // Log the real cause — a parse/cast error here would otherwise hide
+      // behind a generic "couldn't reach the server" message.
+      debugPrint('ExpenseStore.load failed: $e\n$st');
+      _error = 'Something went wrong loading your data.';
+      if (!_api.hasAuth) _expenses = _sampleExpenses();
     } finally {
       _loading = false;
       notifyListeners();
@@ -114,9 +122,11 @@ class ExpenseStore extends ChangeNotifier {
       final results = await Future.wait([
         _api.fetchTodayTotal(tz: tz),
         _api.fetchWeeklyTotals(tz: tz),
+        _api.fetchMonthlyTotals(tz: tz),
       ]);
       _todayTotalRemote = results[0] as double;
       _weeklyRemote = results[1] as Map<int, double>;
+      _monthlyRemote = results[2] as Map<int, double>;
       notifyListeners();
     } catch (_) {
       // Keep the optimistic local values if the refresh fails.
@@ -172,9 +182,13 @@ class ExpenseStore extends ChangeNotifier {
   /// DateTime.weekday is Mon=1…Sun=7, so `% 7` maps Sunday to 0.
   int get todayWeekdayIndex => DateTime.now().weekday % 7;
 
-  /// Day-of-month numbers (1-based) in the current month whose total spend
-  /// exceeded the daily budget.
-  Set<int> get overBudgetDays {
+  /// Per-day spend for the current month, keyed by day-of-month (1-based).
+  /// Prefers the server's /analytics/monthly figures when authenticated;
+  /// otherwise derives them locally from [_expenses].
+  Map<int, double> get monthlyTotals {
+    final remote = _monthlyRemote;
+    if (remote != null) return Map.unmodifiable(remote);
+
     final now = DateTime.now();
     final totals = <int, double>{};
     for (final e in _expenses) {
@@ -183,11 +197,15 @@ class ExpenseStore extends ChangeNotifier {
         totals[d.day] = (totals[d.day] ?? 0) + e.amount;
       }
     }
-    return totals.entries
-        .where((entry) => entry.value > budget)
-        .map((entry) => entry.key)
-        .toSet();
+    return totals;
   }
+
+  /// Day-of-month numbers (1-based) in the current month whose total spend
+  /// exceeded the daily budget.
+  Set<int> get overBudgetDays => monthlyTotals.entries
+      .where((entry) => entry.value > budget)
+      .map((entry) => entry.key)
+      .toSet();
 
   // ── Sample data so the dashboard renders meaningfully before sign-in ──
   // Dated relative to today by whole-day offsets so "today" always totals

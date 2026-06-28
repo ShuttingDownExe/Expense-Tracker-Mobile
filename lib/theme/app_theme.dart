@@ -75,4 +75,15 @@ class AppText {
 
   static TextStyle label(double size, Color color, {FontWeight? weight}) =>
       _base(size, weight ?? FontWeight.w400, color);
+
+  /// Literal-size Cormorant with NO legibility upscaling — for dense grids
+  /// (e.g. the month calendar) where the +10 boost makes cells unwieldy.
+  static TextStyle dense(double size, Color color,
+          {FontWeight? weight, double? spacing}) =>
+      GoogleFonts.cormorantGaramond(
+        fontSize: size,
+        fontWeight: weight ?? FontWeight.w400,
+        color: color,
+        letterSpacing: spacing,
+      );
 }

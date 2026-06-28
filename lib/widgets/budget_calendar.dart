@@ -27,16 +27,8 @@ class BudgetCalendar extends StatelessWidget {
     final firstWeekday = DateTime(now.year, now.month, 1).weekday; // 1=Mon
     final leadingBlanks = firstWeekday - 1;
 
-    // Build up to 35 cells (5 rows × 7).
-    final cells = <Widget>[];
-    for (var i = 0; i < 35; i++) {
-      final dayNum = i - leadingBlanks + 1;
-      if (dayNum < 1 || dayNum > daysInMonth) {
-        cells.add(const SizedBox.shrink());
-        continue;
-      }
-      cells.add(_dayCell(dayNum, dayNum == today, overDays.contains(dayNum)));
-    }
+    // Exactly the rows this month needs (5 or 6) — no trailing blank row.
+    final rowCount = ((leadingBlanks + daysInMonth) / 7).ceil();
 
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -52,7 +44,7 @@ class BudgetCalendar extends StatelessWidget {
                 children: [
                   if (overDays.isNotEmpty)
                     Text('${overDays.length} over budget',
-                        style: AppText.label(12, AppColors.red)),
+                        style: AppText.dense(13, AppColors.red)),
                   const SizedBox(width: 10),
                   const Text('‹ ',
                       style: TextStyle(color: AppColors.textGhost, fontSize: 19)),
@@ -69,23 +61,29 @@ class BudgetCalendar extends StatelessWidget {
                 Expanded(
                   child: Center(
                     child: Text(h,
-                        style: AppText.label(10, AppColors.textGhost,
+                        style: AppText.dense(15, AppColors.textGhost,
                             weight: FontWeight.w500)),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 4),
-          GridView.count(
-            crossAxisCount: 7,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 2,
-            crossAxisSpacing: 2,
-            childAspectRatio: 1.05,
-            children: cells,
-          ),
-          const SizedBox(height: 10),
+          // Manual 7-column grid: a Column of week Rows with fixed-height
+          // cells. Avoids GridView, which over-sized its own height here and
+          // left a dead band below the dates.
+          for (var r = 0; r < rowCount; r++) ...[
+            if (r > 0) const SizedBox(height: 4),
+            Row(
+              children: [
+                for (var c = 0; c < 7; c++)
+                  Expanded(
+                    child: _dayCell(
+                        r * 7 + c - leadingBlanks + 1, daysInMonth, today, overDays),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
           Row(
             children: [
               _legend(AppColors.red, 'Over budget'),
@@ -98,7 +96,15 @@ class BudgetCalendar extends StatelessWidget {
     );
   }
 
-  Widget _dayCell(int day, bool isToday, bool isOver) {
+  static const double _cellHeight = 38;
+
+  Widget _dayCell(int day, int daysInMonth, int today, Set<int> overDays) {
+    // Leading/trailing blanks keep their slot so columns stay aligned.
+    if (day < 1 || day > daysInMonth) {
+      return const SizedBox(height: _cellHeight);
+    }
+    final isToday = day == today;
+    final isOver = overDays.contains(day);
     final Color bg = isToday
         ? AppColors.goldCell
         : isOver
@@ -110,6 +116,8 @@ class BudgetCalendar extends StatelessWidget {
             ? AppColors.red
             : AppColors.textSecondary;
     return Container(
+      height: _cellHeight,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
@@ -120,7 +128,7 @@ class BudgetCalendar extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         '$day',
-        style: AppText.label(12, fg,
+        style: AppText.dense(18, fg,
             weight: (isToday || isOver) ? FontWeight.w600 : FontWeight.w400),
       ),
     );
@@ -134,7 +142,7 @@ class BudgetCalendar extends StatelessWidget {
             height: 7,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 5),
-        Text(label, style: AppText.label(10, const Color(0xFF444444))),
+        Text(label, style: AppText.dense(13, const Color(0xFF888888))),
       ],
     );
   }

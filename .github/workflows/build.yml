@@ -34,6 +34,10 @@ concurrency:
 env:
   FLUTTER_VERSION: '3.38.7'
   FIREBASE_APP_ID: '1:202069546642:android:a31694bec7b0ca8bfc784b'
+  # Semantic base for the version name; the workflow run number is appended as
+  # the patch and used as the (always-incrementing) build/version code.
+  # Bump this when you cut a real minor/major release.
+  VERSION_BASE: '1.01'
 
 jobs:
   build:
@@ -148,8 +152,14 @@ jobs:
       - name: Test
         run: flutter test
 
+      # versionName = VERSION_BASE.<run_number> (e.g. 1.0.42), versionCode =
+      # <run_number>, so every build has a distinct, increasing version.
       - name: Build APK (${{ env.TARGET_ENV }})
-        run: flutter build apk --release --dart-define=APP_ENV="$TARGET_ENV"
+        run: |
+          flutter build apk --release \
+            --dart-define=APP_ENV="$TARGET_ENV" \
+            --build-name="${VERSION_BASE}.${{ github.run_number }}" \
+            --build-number="${{ github.run_number }}"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -174,7 +184,7 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk \
             --app "$FIREBASE_APP_ID" \
             --groups uat-testers \
-            --release-notes "$TARGET_ENV build · ${{ github.sha }}"
+            --release-notes "v${VERSION_BASE}.${{ github.run_number }} · $TARGET_ENV · ${{ github.sha }}"
 
 # NOTE: release builds are currently signed with the debug key (Flutter's
 # default release signingConfig). For Play Store distribution, add a real
