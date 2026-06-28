@@ -23,13 +23,18 @@ void main() {
       expect(sentAuth, 'Bearer token-abc');
     });
 
-    test('fetchExpenses parses the id-keyed map into a list', () async {
+    test('fetchExpenses parses the {data:[…]} array shape into a list',
+        () async {
       final client = MockClient((req) async {
         expect(req.url.path, endsWith('/expenses'));
+        // The API wraps the list in `data` (newest first) with per-item ids.
         return http.Response(
           jsonEncode({
-            'id1': {'date': '2026-06-21', 'description': 'A', 'amount': 10, 'vendor': 'Food'},
-            'id2': {'date': '2026-06-21', 'description': 'B', 'amount': 5, 'vendor': 'Bills'},
+            'data': [
+              {'id': 'id1', 'date': '2026-06-21', 'description': 'A', 'amount': 10, 'vendor': 'Food'},
+              {'id': 'id2', 'date': '2026-06-21', 'description': 'B', 'amount': 5, 'vendor': 'Bills'},
+            ],
+            'metaData': {'nextCursor': null, 'hasMore': false, 'count': 2},
           }),
           200,
         );

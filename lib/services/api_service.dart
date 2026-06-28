@@ -40,7 +40,8 @@ class ApiService {
 
   Uri _uri(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
 
-  /// GET /api/expenses — returns the user's expenses keyed by id.
+  /// GET /api/expenses — the API returns `{ data: [ {id, …}, … ], metaData }`
+  /// (paginated, newest first), where each item carries its own `id` field.
   Future<List<Expense>> fetchExpenses() async {
     final res = await _client.get(_uri('/expenses'), headers: await _headers());
     if (res.statusCode != 200) {
@@ -48,11 +49,13 @@ class ApiService {
           statusCode: res.statusCode);
     }
     final body = jsonDecode(res.body);
-    if (body is! Map) return const [];
-    return body.entries
-        .map((e) => Expense.fromJson(
-            e.key as String, Map<String, dynamic>.from(e.value as Map)))
-        .toList();
+    final list = (body is Map && body['data'] is List)
+        ? body['data'] as List
+        : const [];
+    return list.map((item) {
+      final map = Map<String, dynamic>.from(item as Map);
+      return Expense.fromJson((map['id'] as String?) ?? '', map);
+    }).toList();
   }
 
   /// POST /api/expenses — creates an expense and returns it with its new id.
@@ -106,6 +109,23 @@ class ApiService {
     );
     if (res.statusCode != 200) {
       throw ApiException('Failed to fetch weekly totals',
+          statusCode: res.statusCode);
+    }
+    final json = Map<String, dynamic>.from(jsonDecode(res.body) as Map);
+    return json.map(
+        (k, v) => MapEntry(int.parse(k), (v as num?)?.toDouble() ?? 0));
+  }
+
+  /// GET /api/analytics/monthly?tz=… — returns totals keyed by day-of-month
+  /// (1 = the 1st) up to today. Note this is 1-based, unlike the 0-based
+  /// /weekly response.
+  Future<Map<int, double>> fetchMonthlyTotals({String? tz}) async {
+    final res = await _client.get(
+      _uri('/analytics/monthly${tz != null ? '?tz=$tz' : ''}'),
+      headers: await _headers(),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException('Failed to fetch monthly totals',
           statusCode: res.statusCode);
     }
     final json = Map<String, dynamic>.from(jsonDecode(res.body) as Map);
