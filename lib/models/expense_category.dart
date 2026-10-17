@@ -14,6 +14,40 @@ class ExpenseCategory {
   Color get tintBg => color.withValues(alpha: 0.12);
   Color get tintBorder => color.withValues(alpha: 0.25);
 
+  IconData get icon {
+    switch (value.toLowerCase()) {
+      case 'food':
+        return Icons.local_cafe;
+      case 'transport':
+        return Icons.directions_car;
+      case 'entertainment':
+        return Icons.movie;
+      case 'education':
+        return Icons.school;
+      case 'dining':
+        return Icons.restaurant;
+      case 'groceries':
+        return Icons.shopping_bag;
+      case 'medical':
+        return Icons.local_hospital;
+      case 'utility':
+        return Icons.bolt;
+      case 'fashion':
+        return Icons.checkroom;
+      case 'misc':
+      default:
+        return Icons.receipt_long;
+    }
+  }
+
+  static ExpenseCategory fromValue(String? value) {
+    if (value == null) return all.last;
+    return all.firstWhere(
+      (c) => c.value.toLowerCase() == value.toLowerCase(),
+      orElse: () => ExpenseCategory(value, value.toUpperCase(), const Color(0xFF5E5E5E)),
+    );
+  }
+
   static const all = <ExpenseCategory>[
     ExpenseCategory('food', 'Food', Color(0xFFE8855A)),
     ExpenseCategory('transport', 'Transport', Color(0xFF5A9BE8)),

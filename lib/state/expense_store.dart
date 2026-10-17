@@ -31,13 +31,20 @@ class ExpenseStore extends ChangeNotifier {
   Map<int, double>? _monthlyRemote; // day-of-month (1-based) → total
   String? _timezone; // resolved device IANA timezone, e.g. 'Asia/Kolkata'
 
+  double _dailyBudget = ApiConfig.dailyBudget;
+  int? _nextCursor;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+
   List<Expense> get expenses => List.unmodifiable(_expenses);
   bool get loading => _loading;
+  bool get loadingMore => _loadingMore;
+  bool get hasMore => _hasMore;
   String? get error => _error;
   String get userName => _userName;
   String get userInitial =>
       _userName.isEmpty ? '?' : _userName[0].toUpperCase();
-  double get budget => ApiConfig.dailyBudget;
+  double get budget => _dailyBudget;
 
   /// True when there is no authenticated API client — the store falls back to
   /// sample data so the design renders without a backend.
@@ -70,20 +77,25 @@ class ExpenseStore extends ChangeNotifier {
     try {
       if (!_api.hasAuth) {
         _expenses = _sampleExpenses();
+        _hasMore = false;
       } else {
         final tz = await _resolveTimezone();
-        // Expenses drive the calendar/list; analytics endpoints drive the
-        // headline total and the weekly graph. Fetch in parallel.
+        // Fetch budget, paginated expenses, and analytics in parallel.
         final results = await Future.wait([
-          _api.fetchExpenses(),
+          _api.fetchExpensesPaged(limit: 20),
           _api.fetchTodayTotal(tz: tz),
           _api.fetchWeeklyTotals(tz: tz),
           _api.fetchMonthlyTotals(tz: tz),
+          _api.fetchDailyBudget(),
         ]);
-        _expenses = results[0] as List<Expense>;
+        final paged = results[0] as PaginatedExpenses;
+        _expenses = paged.expenses;
+        _nextCursor = paged.nextCursor;
+        _hasMore = paged.hasMore;
         _todayTotalRemote = results[1] as double;
         _weeklyRemote = results[2] as Map<int, double>;
         _monthlyRemote = results[3] as Map<int, double>;
+        _dailyBudget = results[4] as double;
       }
     } on ApiException catch (e) {
       // Surface the failure (the dashboard shows a glass error banner) instead
@@ -99,6 +111,40 @@ class ExpenseStore extends ChangeNotifier {
     } finally {
       _loading = false;
       notifyListeners();
+    }
+  }
+
+  /// Fetches the next page of expenses and appends them to the ledger.
+  Future<void> loadMore() async {
+    if (!_hasMore || _loadingMore || !_api.hasAuth) return;
+    _loadingMore = true;
+    notifyListeners();
+    try {
+      final paged = await _api.fetchExpensesPaged(limit: 20, cursor: _nextCursor);
+      final existingIds = _expenses.map((e) => e.id).toSet();
+      final newExpenses = paged.expenses.where((e) => !existingIds.contains(e.id)).toList();
+      _expenses = [..._expenses, ...newExpenses];
+      _nextCursor = paged.nextCursor;
+      _hasMore = paged.hasMore;
+    } catch (e) {
+      debugPrint('ExpenseStore.loadMore failed: $e');
+    } finally {
+      _loadingMore = false;
+      notifyListeners();
+    }
+  }
+
+  /// Updates the user's daily spend budget locally and remotely.
+  Future<void> updateBudget(double newBudget) async {
+    _dailyBudget = newBudget;
+    notifyListeners();
+    if (_api.hasAuth) {
+      try {
+        _dailyBudget = await _api.updateDailyBudget(newBudget);
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Failed to update daily budget remotely: $e');
+      }
     }
   }
 
@@ -158,6 +204,28 @@ class ExpenseStore extends ChangeNotifier {
     await _refreshAnalytics();
   }
 
+  /// Delete an expense by ID. Optimistically removes from local list and updates figures.
+  Future<void> deleteExpense(String id) async {
+    final matchIndex = _expenses.indexWhere((e) => e.id == id);
+    if (matchIndex == -1) return;
+    final toRemove = _expenses[matchIndex];
+    _expenses = _expenses.where((e) => e.id != id).toList();
+
+    if (toRemove.date == todayKey && _todayTotalRemote != null) {
+      _todayTotalRemote = (_todayTotalRemote! - toRemove.amount).clamp(0, double.infinity);
+    }
+    notifyListeners();
+
+    if (_api.hasAuth) {
+      try {
+        await _api.deleteExpense(id);
+        await _refreshAnalytics();
+      } catch (e) {
+        debugPrint('Failed to delete expense remotely: $e');
+      }
+    }
+  }
+
   /// Daily totals for the current Sun–Sat week, oldest first.
   /// Returns 7 values aligned with day labels S M T W T F S — matching the
   /// API's Sunday-first /analytics/weekly convention. Prefers the server's
@@ -206,6 +274,31 @@ class ExpenseStore extends ChangeNotifier {
       .where((entry) => entry.value > budget)
       .map((entry) => entry.key)
       .toSet();
+
+  /// Per-day spend for any specified month (1-based day-of-month -> total).
+  Map<int, double> getMonthlyTotalsFor(int year, int month) {
+    final now = DateTime.now();
+    if (year == now.year && month == now.month && _monthlyRemote != null) {
+      return Map.unmodifiable(_monthlyRemote!);
+    }
+    final totals = <int, double>{};
+    for (final e in _expenses) {
+      final d = e.dateTime;
+      if (d.year == year && d.month == month) {
+        totals[d.day] = (totals[d.day] ?? 0) + e.amount;
+      }
+    }
+    return totals;
+  }
+
+  /// Day-of-month numbers in the specified month whose total spend exceeded daily budget.
+  Set<int> getOverBudgetDaysFor(int year, int month) {
+    return getMonthlyTotalsFor(year, month)
+        .entries
+        .where((entry) => entry.value > budget)
+        .map((entry) => entry.key)
+        .toSet();
+  }
 
   // ── Sample data so the dashboard renders meaningfully before sign-in ──
   // Dated relative to today by whole-day offsets so "today" always totals

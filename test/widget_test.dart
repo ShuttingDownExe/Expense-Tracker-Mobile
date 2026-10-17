@@ -8,8 +8,8 @@ void main() {
     await store.load();
     // Sample data puts ₹2,840 worth of expenses on today.
     expect(store.spentToday, 2840);
-    expect(store.budget, 5000);
-    expect(store.remaining, 2160);
-    expect(store.isOver, isFalse);
+    expect(store.budget, 500);
+    expect(store.remaining, -2340);
+    expect(store.isOver, isTrue);
   });
 }

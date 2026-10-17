@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Cormorant Garamond serif typography (loaded from Google Fonts at runtime)
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.1
   # HTTP client for the Expense Tracker API
   http: ^1.2.2
   # Indian-locale number/date formatting (₹ grouping, date labels)
@@ -45,6 +45,9 @@ dependencies:
   firebase_auth: ^6.5.3
   flutter_timezone: ^5.1.0
   google_sign_in: ^7.2.0
+  mobile_scanner: ^7.4.2
+  url_launcher: ^6.3.2
+  image_picker: ^1.2.3
 
 dev_dependencies:
   flutter_test:

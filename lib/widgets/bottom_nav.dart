@@ -1,105 +1,116 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Floating "liquid glass" bottom bar — a translucent, blurred pill that hovers
-/// above the screen bottom (Apple-style). It holds the Dashboard and History
-/// icons flanking the central gold "+" action.
-///
-/// For the frosted-glass blur to show the content behind it, the screen must
-/// set `extendBody: true` on its Scaffold so the body renders under this bar.
+/// 3-Tab Neo-Brutalist Bottom Navigation matching the Stitch "Daily Budget Tracker" design:
+/// 4px solid black top border, stark background, active tab in solid primary red with white text,
+/// and inactive tabs in black text with vertical dividing borders.
 class BottomNav extends StatelessWidget {
-  const BottomNav({super.key, required this.onAdd});
+  const BottomNav({
+    super.key,
+    required this.onAdd,
+    this.currentIndex = 0,
+    this.onTabSelected,
+  });
 
-  /// Opens the add-expense flow when the central "+" is tapped.
+  /// Opens the add-expense flow when the central "+" / ADD is tapped.
   final VoidCallback onAdd;
+  final int currentIndex;
+  final ValueChanged<int>? onTabSelected;
 
-  static const double _height = 68;
+  static const double _height = 70;
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).padding.bottom;
 
-    return Padding(
-      // Float the pill: inset from the sides and lifted off the bottom edge
-      // (clearing the home indicator).
-      padding: EdgeInsets.fromLTRB(28, 0, 28, 10 + bottomInset),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_height / 2),
-        child: BackdropFilter(
-          // The actual frosted-glass blur of whatever scrolls behind it.
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: Container(
-            height: _height,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(_height / 2),
-              // Faint translucent fill + a soft top highlight gives the glassy
-              // sheen over the blur.
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.white.withValues(alpha: 0.10),
-                  Colors.white.withValues(alpha: 0.04),
-                ],
-              ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.14),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(child: _item(Icons.home_outlined, active: true)),
-                _addButton(),
-                Expanded(child: _item(Icons.history)),
-              ],
+    return Container(
+      height: _height + bottomInset,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      decoration: const BoxDecoration(
+        color: AppColors.bgLight,
+        border: Border(
+          top: BorderSide(color: AppColors.borderBlack, width: 4),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Tab 0: DASHBOARD
+          Expanded(
+            child: _tabItem(
+              index: 0,
+              icon: Icons.grid_view,
+              label: 'DASHBOARD',
+              isActive: currentIndex == 0,
+              onTap: () => onTabSelected?.call(0),
+              showRightBorder: true,
             ),
           ),
-        ),
+
+          // Tab 1: ADD (Central action)
+          Expanded(
+            child: _tabItem(
+              index: 1,
+              icon: Icons.add,
+              label: 'ADD',
+              isActive: currentIndex == 1,
+              onTap: onAdd,
+              showRightBorder: true,
+              isHighlight: true,
+            ),
+          ),
+
+          // Tab 2: LOG (Transactions)
+          Expanded(
+            child: _tabItem(
+              index: 2,
+              icon: Icons.receipt_long,
+              label: 'LOG',
+              isActive: currentIndex == 2,
+              onTap: () => onTabSelected?.call(2),
+              showRightBorder: false,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _item(IconData icon, {bool active = false}) {
-    final color = active ? AppColors.gold : AppColors.textSecondary;
-    return Icon(icon, size: 30, color: color);
-  }
+  Widget _tabItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+    required bool showRightBorder,
+    bool isHighlight = false,
+  }) {
+    final Color bg = isActive ? AppColors.primaryRed : Colors.transparent;
+    final Color fg = isActive ? AppColors.onPrimary : AppColors.textPrimary;
 
-  /// The central gold "+" — its own glassy gold circle inside the pill.
-  Widget _addButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFC9A84C).withValues(alpha: 0.45),
-              blurRadius: 18,
+    return Material(
+      color: bg,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: AppColors.primaryRed.withValues(alpha: 0.2),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              right: showRightBorder
+                  ? const BorderSide(color: AppColors.borderBlack, width: 2)
+                  : BorderSide.none,
             ),
-          ],
-        ),
-        child: Material(
-          color: AppColors.gold,
-          shape: const CircleBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onAdd,
-            customBorder: const CircleBorder(),
-            child: const SizedBox(
-              width: 54,
-              height: 54,
-              child: Icon(Icons.add, color: Colors.black, size: 32),
-            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 26, color: fg),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: AppText.labelBold(11, fg, spacing: 0.5),
+              ),
+            ],
           ),
         ),
       ),

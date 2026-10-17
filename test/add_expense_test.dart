@@ -32,10 +32,13 @@ void main() {
     await tester.pump();
     expect(find.text('150'), findsOneWidget);
 
-    // Pick a category, then save via the pinned header check button.
+    // Verify QR Scanner button is displayed in the header
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
+
+    // Pick a category, then save via the SAVE EXPENSE button.
     await tester.tap(find.text('Food'));
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.text('SAVE EXPENSE'));
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(store.expenses.length, before + 1);

@@ -14,8 +14,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.bgBlack,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: AppColors.bgLight,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   // Try to initialise Firebase. If it isn't configured yet (placeholder
@@ -44,11 +45,11 @@ class ExpenseTrackerApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: AppColors.bgBlack,
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.gold,
-          surface: AppColors.bgSurface,
+        scaffoldBackgroundColor: AppColors.bgLight,
+        brightness: Brightness.light,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primaryRed,
+          surface: AppColors.surfaceWhite,
         ),
       ),
       home: firebaseReady
@@ -74,9 +75,10 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            backgroundColor: AppColors.bgBlack,
+            backgroundColor: AppColors.bgLight,
             body: Center(
-                child: CircularProgressIndicator(color: AppColors.gold)),
+              child: CircularProgressIndicator(color: AppColors.primaryRed),
+            ),
           );
         }
 

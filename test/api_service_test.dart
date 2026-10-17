@@ -66,8 +66,8 @@ void main() {
         vendor: 'Food',
       ));
 
-      // Only the three schema fields are sent — the server sets the date.
-      expect(sentBody!.keys.toSet(), {'description', 'amount', 'vendor'});
+      // Payload includes description, amount, vendor, and optional date.
+      expect(sentBody!.keys.toSet(), {'description', 'amount', 'vendor', 'date'});
       expect(created.id, 'new-1');
       expect(created.amount, 150);
     });
