@@ -4,9 +4,9 @@ import '../config/app_config.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
-/// Sign-in screen. Google sign-in is always offered; email/password is shown
-/// only when [emailAuthEnabled] (on in dev/tester builds, off in production —
-/// see [AppConfig.emailAuthEnabled]).
+/// Sign-in screen matching the Stitch Raw Ledger Neo-Brutalist design:
+/// sharp 0px inputs, 3px solid black borders, 4px hard black shadows,
+/// Anton typography, and bold primary red actions.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key, required this.auth, bool? emailAuthEnabled})
       : emailAuthEnabled = emailAuthEnabled ?? AppConfig.emailAuthEnabled;
@@ -46,8 +46,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _signInWithGoogle() => _run(widget.auth.signInWithGoogle);
 
-  /// Runs an auth action with shared busy/error handling. On success the
-  /// AuthGate reacts to the auth-state change, so there's nothing else to do.
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
@@ -65,70 +63,86 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgBlack,
+      backgroundColor: AppColors.bgLight,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Expense Tracker',
-                    textAlign: TextAlign.center, style: AppText.screenTitle),
-                const SizedBox(height: 6),
-                Text(
-                  widget.emailAuthEnabled
-                      ? (_isRegister ? 'Create your account' : 'Welcome back')
-                      : 'Sign in to continue',
-                  textAlign: TextAlign.center,
-                  style: AppText.label(13, AppColors.textMuted),
-                ),
-                const SizedBox(height: 36),
-
-                // Email/password block — dev/tester builds only.
-                if (widget.emailAuthEnabled) ...[
-                  _field(_emailController, 'Email',
-                      keyboardType: TextInputType.emailAddress),
-                  const SizedBox(height: 12),
-                  _field(_passwordController, 'Password', obscure: true),
-                ],
-
-                if (_error != null) ...[
-                  const SizedBox(height: 14),
-                  Text(_error!,
-                      textAlign: TextAlign.center,
-                      style: AppText.label(12, AppColors.red)),
-                ],
-
-                if (widget.emailAuthEnabled) ...[
-                  const SizedBox(height: 24),
-                  _submitButton(),
-                  const SizedBox(height: 18),
-                  _orDivider(),
-                  const SizedBox(height: 18),
-                ],
-
-                _googleButton(),
-
-                if (widget.emailAuthEnabled) ...[
-                  const SizedBox(height: 14),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => setState(() {
-                              _isRegister = !_isRegister;
-                              _error = null;
-                            }),
-                    child: Text(
-                      _isRegister
-                          ? 'Have an account? Sign in'
-                          : 'New here? Create an account',
-                      style: AppText.label(13, AppColors.gold),
-                    ),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceWhite,
+                border: Border.all(color: AppColors.borderBlack, width: 4),
+                boxShadow: AppShadows.brutalBlack,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'EXPENSE_ROOT',
+                    textAlign: TextAlign.center,
+                    style: AppText.headlineLg(color: AppColors.primaryRed),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.emailAuthEnabled
+                        ? (_isRegister ? 'CREATE ACCOUNT' : 'DAILY BUDGET TRACKER')
+                        : 'SIGN IN TO CONTINUE',
+                    textAlign: TextAlign.center,
+                    style: AppText.labelBold(12, AppColors.textSecondary, spacing: 1.0),
+                  ),
+                  const SizedBox(height: 28),
+
+                  if (widget.emailAuthEnabled) ...[
+                    _field(_emailController, 'EMAIL ADDRESS',
+                        keyboardType: TextInputType.emailAddress),
+                    const SizedBox(height: 14),
+                    _field(_passwordController, 'PASSWORD', obscure: true),
+                  ],
+
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      color: AppColors.alertYellow,
+                      child: Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: AppText.labelBold(11, AppColors.primaryRed),
+                      ),
+                    ),
+                  ],
+
+                  if (widget.emailAuthEnabled) ...[
+                    const SizedBox(height: 20),
+                    _submitButton(),
+                    const SizedBox(height: 16),
+                    _orDivider(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  _googleButton(),
+
+                  if (widget.emailAuthEnabled) ...[
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => setState(() {
+                                _isRegister = !_isRegister;
+                                _error = null;
+                              }),
+                      child: Text(
+                        _isRegister
+                            ? 'ALREADY REGISTERED? SIGN IN ›'
+                            : 'NEW HERE? CREATE ACCOUNT ›',
+                        style: AppText.labelBold(12, AppColors.primaryRed),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -140,23 +154,23 @@ class _SignInScreenState extends State<SignInScreen> {
       {bool obscure = false, TextInputType? keyboardType}) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        color: AppColors.bgLight,
+        borderRadius: BorderRadius.zero,
+        border: Border.all(color: AppColors.borderBlack, width: 2),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: TextField(
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
         enabled: !_busy,
-        style: AppText.body(AppColors.textPrimary),
-        cursorColor: AppColors.gold,
+        style: AppText.bodyLg(color: AppColors.textPrimary),
+        cursorColor: AppColors.primaryRed,
         decoration: InputDecoration(
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
           hintText: hint,
-          hintStyle: AppText.body(AppColors.textDark),
+          hintStyle: AppText.labelBold(11, AppColors.textSecondary),
         ),
       ),
     );
@@ -164,14 +178,14 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Widget _orDivider() {
     final line = Expanded(
-      child: Container(height: 1, color: AppColors.borderSubtle),
+      child: Container(height: 2, color: AppColors.borderBlack),
     );
     return Row(
       children: [
         line,
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or', style: AppText.label(12, AppColors.textMuted)),
+          child: Text('OR', style: AppText.labelBold(11, AppColors.textSecondary)),
         ),
         line,
       ],
@@ -182,24 +196,30 @@ class _SignInScreenState extends State<SignInScreen> {
     return GestureDetector(
       onTap: _busy ? null : _signInWithGoogle,
       child: Container(
-        height: 52,
+        height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderSubtle),
+          color: AppColors.surfaceWhite,
+          borderRadius: BorderRadius.zero,
+          border: Border.all(color: AppColors.borderBlack, width: 2),
+          boxShadow: AppShadows.brutalBlackSm,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Simple multi-color "G" mark rendered without an asset.
-            Text('G',
-                style: AppText.label(18, const Color(0xFF4285F4),
-                    weight: FontWeight.w700)),
+            const Text(
+              'G',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF4285F4),
+              ),
+            ),
             const SizedBox(width: 10),
-            Text('Continue with Google',
-                style: AppText.label(15, AppColors.textPrimary,
-                    weight: FontWeight.w500)),
+            Text(
+              'CONTINUE WITH GOOGLE',
+              style: AppText.labelBold(12, AppColors.textPrimary),
+            ),
           ],
         ),
       ),
@@ -210,23 +230,29 @@ class _SignInScreenState extends State<SignInScreen> {
     return GestureDetector(
       onTap: _busy ? null : _submit,
       child: Opacity(
-        opacity: _busy ? 0.6 : 1,
+        opacity: _busy ? 0.6 : 1.0,
         child: Container(
-          height: 52,
+          height: 48,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.gold,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.primaryRed,
+            borderRadius: BorderRadius.zero,
+            border: Border.all(color: AppColors.borderBlack, width: 2),
+            boxShadow: AppShadows.brutalBlackSm,
           ),
           child: _busy
               ? const SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.black))
-              : Text(_isRegister ? 'Create account' : 'Sign in',
-                  style: AppText.label(16, Colors.black, weight: FontWeight.w600)
-                      .copyWith(letterSpacing: 0.5)),
+                    strokeWidth: 2.5,
+                    color: AppColors.onPrimary,
+                  ),
+                )
+              : Text(
+                  _isRegister ? 'CREATE ACCOUNT' : 'SIGN IN',
+                  style: AppText.headlineSm(color: AppColors.onPrimary),
+                ),
         ),
       ),
     );

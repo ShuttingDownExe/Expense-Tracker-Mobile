@@ -1,8 +1,8 @@
-name: Build APK
+name: Build & Distribute AAB
 
 # Branch → environment mapping:
-#   push to UAT  → test build, distributed to the uat-testers group
-#   push to main → prod build (artifact only; not auto-distributed to UAT)
+#   push/merge to UAT  → test/UAT build (signed AAB), distributed to the uat-testers group
+#   push/merge to main → prod build (signed AAB artifact only; not auto-distributed to UAT)
 # workflow_dispatch lets you build either env manually and choose distribution.
 #
 # `test`/`prod` map to the hosted App Hosting backends + HTTPS; email sign-in is
@@ -121,7 +121,7 @@ jobs:
           key: pub-${{ hashFiles('pubspec.lock') }}
           restore-keys: pub-
 
-      # Write the release keystore + key.properties so the APK is signed with a
+      # Write the release keystore + key.properties so the AAB is signed with a
       # stable key whose SHA-1 is registered in Firebase (required for Google
       # sign-in on distributed builds). ANDROID_KEYSTORE is base64 of the .jks.
       - name: Set up release signing
@@ -154,18 +154,18 @@ jobs:
 
       # versionName = VERSION_BASE.<run_number> (e.g. 1.0.42), versionCode =
       # <run_number>, so every build has a distinct, increasing version.
-      - name: Build APK (${{ env.TARGET_ENV }})
+      - name: Build Android App Bundle (${{ env.TARGET_ENV }})
         run: |
-          flutter build apk --release \
+          flutter build appbundle --release \
             --dart-define=APP_ENV="$TARGET_ENV" \
             --build-name="${VERSION_BASE}.${{ github.run_number }}" \
             --build-number="${{ github.run_number }}"
 
-      - name: Upload APK artifact
+      - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ env.TARGET_ENV }}-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: app-${{ env.TARGET_ENV }}-aab
+          path: build/app/outputs/bundle/release/app-release.aab
 
       # Distribute via Google's official Firebase CLI (firebase-tools), authed
       # with a service account that has the "Firebase App Distribution Admin"
@@ -181,11 +181,7 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           npm install -g firebase-tools
           firebase appdistribution:distribute \
-            build/app/outputs/flutter-apk/app-release.apk \
+            build/app/outputs/bundle/release/app-release.aab \
             --app "$FIREBASE_APP_ID" \
             --groups uat-testers \
             --release-notes "v${VERSION_BASE}.${{ github.run_number }} · $TARGET_ENV · ${{ github.sha }}"
-
-# NOTE: release builds are currently signed with the debug key (Flutter's
-# default release signingConfig). For Play Store distribution, add a real
-# keystore via secrets and wire a signingConfig in android/app/build.gradle.kts.

@@ -4,10 +4,9 @@ import '../state/expense_store.dart';
 import '../theme/app_theme.dart';
 import 'app_card.dart';
 
-/// "This Week" card: a line chart where the y-axis runs from the daily budget
-/// (top) down to ₹0 (bottom). Past days draw a solid gold line (animated),
-/// today shows a pulsing dot, and future days are a dashed grey segment with
-/// hollow dots — exactly as specified in the design.
+/// "This Week / Weekly Trend" card matching the Stitch Raw Ledger design:
+/// 4px black border, 4px brutal shadow, Anton daily average rate,
+/// red brutalist trend line, and mon-sun day columns.
 class WeeklyGraph extends StatefulWidget {
   const WeeklyGraph({super.key, required this.store});
 
@@ -18,254 +17,234 @@ class WeeklyGraph extends StatefulWidget {
 }
 
 class _WeeklyGraphState extends State<WeeklyGraph>
-    with TickerProviderStateMixin {
-  late final AnimationController _lineCtrl; // one-shot line draw
-  late final AnimationController _pulseCtrl; // infinite today pulse
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animCtrl;
 
   @override
   void initState() {
     super.initState();
-    _lineCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400));
-    _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2000))
-      ..repeat();
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) _lineCtrl.forward();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _animCtrl.forward();
     });
   }
 
   @override
   void dispose() {
-    _lineCtrl.dispose();
-    _pulseCtrl.dispose();
+    _animCtrl.dispose();
     super.dispose();
   }
 
-  // Sunday-first, matching the API's /analytics/weekly day indexing.
-  static const _labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  static const _labels = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
+    final totals = store.weeklyTotals;
     final todayIdx = store.todayWeekdayIndex;
 
+    // Calculate weekly average
+    final double weekSum = totals.fold(0.0, (sum, val) => sum + val);
+    final int activeDays = (todayIdx + 1).clamp(1, 7);
+    final double dailyAvg = activeDays > 0 ? (weekSum / activeDays) : 0;
+
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+      padding: const EdgeInsets.all(18),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('THIS WEEK', style: AppText.cardHeading),
-              Text(_monthLabel(),
-                  style: AppText.label(11, AppColors.textFaint)),
-            ],
+          // Header Row
+          Container(
+            padding: const EdgeInsets.only(bottom: 10),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.borderBlack, width: 2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'THIS WEEK',
+                      style: AppText.labelBold(11, AppColors.textSecondary,
+                          spacing: 1.2),
+                    ),
+                    Text(
+                      'TREND',
+                      style: AppText.headlineSm(color: AppColors.textPrimary),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.trending_up,
+                        size: 20, color: AppColors.primaryRed),
+                    const SizedBox(width: 4),
+                    Text(
+                      '₹${store.formatInr(dailyAvg.round())}/DAY',
+                      style: AppText.headlineSm(color: AppColors.primaryRed),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
+
+          // Custom Painted Chart
           SizedBox(
-            height: 70,
-            width: double.infinity,
+            height: 90,
             child: AnimatedBuilder(
-              animation: Listenable.merge([_lineCtrl, _pulseCtrl]),
+              animation: _animCtrl,
               builder: (context, _) {
                 return CustomPaint(
-                  painter: _GraphPainter(
-                    totals: store.weeklyTotals,
+                  painter: _BrutalChartPainter(
+                    totals: totals,
                     budget: store.budget,
-                    todayIndex: todayIdx,
-                    lineProgress: _lineCtrl.value,
-                    pulse: _pulseCtrl.value,
+                    todayIdx: todayIdx,
+                    progress: _animCtrl.value,
                   ),
                 );
               },
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (var i = 0; i < 7; i++)
-                Text(
-                  _labels[i],
-                  style: AppText.label(
-                    i == todayIdx ? 12 : 11,
-                    i == todayIdx
-                        ? AppColors.gold
-                        : i < todayIdx
-                            ? const Color(0xFF666666)
-                            : AppColors.textDark,
-                    weight: i == todayIdx ? FontWeight.w600 : FontWeight.w400,
+
+          // Day Labels row
+          Container(
+            padding: const EdgeInsets.only(top: 8),
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(color: AppColors.borderBlack, width: 2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (int i = 0; i < 7; i++)
+                  Text(
+                    _labels[i],
+                    style: AppText.labelBold(
+                      11,
+                      i == todayIdx
+                          ? AppColors.primaryRed
+                          : (i < todayIdx
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
-
-  String _monthLabel() {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' //
-    ];
-    final now = DateTime.now();
-    return '${months[now.month - 1]} ${now.year}';
-  }
 }
 
-class _GraphPainter extends CustomPainter {
-  _GraphPainter({
-    required this.totals,
-    required this.budget,
-    required this.todayIndex,
-    required this.lineProgress,
-    required this.pulse,
-  });
-
+class _BrutalChartPainter extends CustomPainter {
   final List<double> totals;
   final double budget;
-  final int todayIndex;
-  final double lineProgress;
-  final double pulse;
+  final int todayIdx;
+  final double progress;
+
+  _BrutalChartPainter({
+    required this.totals,
+    required this.budget,
+    required this.todayIdx,
+    required this.progress,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const topPad = 6.0;
-    const botPad = 6.0;
-    final usableH = size.height - topPad - botPad;
-    final stepX = size.width / 6; // 7 points → 6 gaps
+    if (totals.length < 7) return;
 
-    Offset pointFor(int i) {
-      final v = budget <= 0 ? 0.0 : (totals[i] / budget).clamp(0.0, 1.0);
-      // value==budget → top, value==0 → bottom
-      final y = topPad + (1 - v) * usableH;
-      return Offset(i * stepX, y);
-    }
+    final double maxVal = totals.reduce((a, b) => a > b ? a : b);
+    final double ceiling = (maxVal > budget ? maxVal : budget) * 1.15;
+    final double dx = size.width / 6;
 
-    final points = List.generate(7, pointFor);
-    final gold = const Color(0xFFC9A84C);
-
-    // Budget reference line (dashed gold near the top).
-    _drawDashedLine(
-      canvas,
-      Offset(0, topPad),
-      Offset(size.width, topPad),
-      Paint()
-        ..color = gold.withValues(alpha: 0.3)
-        ..strokeWidth = 0.6,
-      dash: 4,
-      gap: 4,
-    );
-
-    final clampToday = todayIndex.clamp(0, 6);
-
-    // Gradient fill under the past (gold) segment.
-    if (clampToday > 0) {
-      final fillPath = Path()..moveTo(points[0].dx, size.height - botPad);
-      for (var i = 0; i <= clampToday; i++) {
-        fillPath.lineTo(points[i].dx, points[i].dy);
-      }
-      fillPath.lineTo(points[clampToday].dx, size.height - botPad);
-      fillPath.close();
-      canvas.drawPath(
-        fillPath,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [gold.withValues(alpha: 0.28), gold.withValues(alpha: 0)],
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
-      );
-    }
-
-    // Future dashed grey segment + hollow dots.
-    final futurePaint = Paint()
-      ..color = AppColors.textDark
-      ..strokeWidth = 1.5
+    // Line paints
+    final linePaint = Paint()
+      ..color = AppColors.primaryRed
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    for (var i = clampToday; i < 6; i++) {
-      _drawDashedLine(canvas, points[i], points[i + 1], futurePaint,
-          dash: 5, gap: 5);
-    }
-    for (var i = clampToday + 1; i < 7; i++) {
-      canvas.drawCircle(points[i], 3, futurePaint);
-    }
+      ..strokeCap = StrokeCap.square;
 
-    // Past gold line, drawn progressively (stroke-dashoffset equivalent).
-    final goldLine = Paint()
-      ..color = gold
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final pastPath = Path()..moveTo(points[0].dx, points[0].dy);
-    for (var i = 1; i <= clampToday; i++) {
-      pastPath.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(_trimPath(pastPath, lineProgress), goldLine);
-
-    // Past day dots (hollow gold), then today's pulsing dot.
-    final dotFill = Paint()..color = AppColors.bgSurface;
-    final dotStroke = Paint()
-      ..color = gold
-      ..strokeWidth = 2
+    final dashedPaint = Paint()
+      ..color = AppColors.surfaceDim
+      ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-    for (var i = 0; i < clampToday; i++) {
-      canvas.drawCircle(points[i], 4, dotFill);
-      canvas.drawCircle(points[i], 4, dotStroke);
+
+    final pointBlack = Paint()
+      ..color = AppColors.borderBlack
+      ..style = PaintingStyle.fill;
+
+    final pointRed = Paint()
+      ..color = AppColors.primaryRed
+      ..style = PaintingStyle.fill;
+
+    final List<Offset> points = [];
+    for (int i = 0; i < 7; i++) {
+      final double yRatio = ceiling <= 0 ? 0 : (totals[i] / ceiling);
+      final double targetY = size.height - (yRatio * size.height * 0.85);
+      final double currentY = size.height - ((size.height - targetY) * progress);
+      points.add(Offset(i * dx, currentY));
     }
 
-    // Today: expanding pulse ring + solid gold dot.
-    final t = points[clampToday];
-    final ringR = 5 + pulse * 9; // scale 1 → ~2.4
-    canvas.drawCircle(
-      t,
-      ringR,
-      Paint()..color = gold.withValues(alpha: (1 - pulse) * 0.7),
-    );
-    canvas.drawCircle(t, 5, Paint()..color = gold);
-  }
-
-  /// Returns the first [progress] fraction of [path] (by length).
-  Path _trimPath(Path path, double progress) {
-    if (progress >= 1) return path;
-    final metrics = path.computeMetrics().toList();
-    final out = Path();
-    var total = 0.0;
-    for (final m in metrics) {
-      total += m.length;
+    // Draw past segment
+    final path = Path();
+    path.moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i <= todayIdx; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
     }
-    var target = total * progress;
-    for (final m in metrics) {
-      if (target <= 0) break;
-      final len = m.length < target ? m.length : target;
-      out.addPath(m.extractPath(0, len), Offset.zero);
-      target -= len;
-    }
-    return out;
-  }
+    canvas.drawPath(path, linePaint);
 
-  void _drawDashedLine(Canvas canvas, Offset a, Offset b, Paint paint,
-      {required double dash, required double gap}) {
-    final total = (b - a).distance;
-    if (total == 0) return;
-    final dir = (b - a) / total;
-    var dist = 0.0;
-    while (dist < total) {
-      final start = a + dir * dist;
-      final end = a + dir * (dist + dash).clamp(0, total);
-      canvas.drawLine(start, end, paint);
-      dist += dash + gap;
+    // Draw future dashed line
+    for (int i = todayIdx; i < 6; i++) {
+      canvas.drawLine(points[i], points[i + 1], dashedPaint);
+    }
+
+    // Draw vertex points
+    for (int i = 0; i < 7; i++) {
+      final p = points[i];
+      if (i == todayIdx) {
+        // Red square on today
+        canvas.drawRect(
+          Rect.fromCenter(center: p, width: 10, height: 10),
+          pointRed,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: p, width: 10, height: 10),
+          Paint()
+            ..color = AppColors.borderBlack
+            ..strokeWidth = 2
+            ..style = PaintingStyle.stroke,
+        );
+      } else if (i <= todayIdx) {
+        // Black circle on past
+        canvas.drawCircle(p, 4, pointBlack);
+      } else {
+        // Empty circle on future
+        canvas.drawCircle(
+          p,
+          3,
+          Paint()
+            ..color = AppColors.surfaceDim
+            ..strokeWidth = 1.5
+            ..style = PaintingStyle.stroke,
+        );
+      }
     }
   }
 
   @override
-  bool shouldRepaint(_GraphPainter old) =>
-      old.lineProgress != lineProgress ||
-      old.pulse != pulse ||
-      old.totals != totals;
+  bool shouldRepaint(covariant _BrutalChartPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.totals != totals;
 }

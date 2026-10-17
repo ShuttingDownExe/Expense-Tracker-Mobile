@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../models/expense_category.dart';
 import '../state/expense_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/budget_calendar.dart';
 import '../widgets/budget_card.dart';
-import '../widgets/glass_loading.dart';
 import '../widgets/weekly_graph.dart';
 import 'add_expense_screen.dart';
+import 'transaction_log_screen.dart';
 
-/// Screen 1 — the dashboard. Header greeting, budget card, weekly graph and
-/// monthly calendar stacked in a single column, with the bottom tab bar.
+/// Screen 1 — Dashboard & Navigation Hub matching the Stitch "Daily Budget Tracker" (Raw Ledger) design.
+/// Features a brutalist header, 3-tab navigation, Today's Spend card, Alerts & Subscriptions card,
+/// Weekly Trend graph, Recent Entries list, and the Transaction Log tab.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, required this.store, this.onSignOut});
 
   final ExpenseStore store;
-
-  /// Present when signed in via Firebase; null in preview mode.
   final Future<void> Function()? onSignOut;
 
   @override
@@ -24,6 +24,8 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  int _currentTab = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,23 +40,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
     if (created == true && mounted) {
-      setState(() {}); // refresh derived figures after a new expense
+      setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgBlack,
-      // Let the body scroll behind the floating glass pill so its blur has
-      // content to frost.
-      extendBody: true,
+      backgroundColor: AppColors.bgLight,
       body: SafeArea(
         bottom: false,
         child: ListenableBuilder(
           listenable: widget.store,
           builder: (context, _) {
             final store = widget.store;
+
+            if (_currentTab == 2) {
+              return TransactionLogScreen(store: store);
+            }
+
             return Stack(
               children: [
                 Column(
@@ -63,15 +67,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        // Extra bottom padding so the last card clears the
-                        // floating glass pill.
-                        padding: const EdgeInsets.fromLTRB(22, 14, 22, 130),
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 90),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             BudgetCard(store: store),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 18),
                             WeeklyGraph(store: store),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 18),
+                            _recentEntries(store),
+                            const SizedBox(height: 18),
                             BudgetCalendar(store: store),
                           ],
                         ),
@@ -79,87 +84,263 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
-                // Error banner (when a fetch failed) pinned below the header.
+
+                // Error banner (Neo-brutalist)
                 if (!store.loading && store.error != null)
                   Positioned(
-                    top: 8,
-                    left: 16,
-                    right: 16,
-                    child: GlassErrorBanner(
-                      message: store.error!,
-                      onRetry: () => store.load(),
+                    top: 70,
+                    left: 18,
+                    right: 18,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.alertYellow,
+                        border: Border.all(
+                            color: AppColors.borderBlack, width: 3),
+                        boxShadow: AppShadows.brutalBlackSm,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber,
+                              color: AppColors.primaryRed, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              store.error!,
+                              style: AppText.body(AppColors.textPrimary,
+                                  weight: FontWeight.w700),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => store.load(),
+                            child: Text('RETRY',
+                                style: AppText.labelBold(
+                                    12, AppColors.primaryRed)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                // Frosted loading overlay, fading out once data arrives.
-                Positioned.fill(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: store.loading
-                        ? const GlassLoadingOverlay()
-                        : const SizedBox.shrink(),
+
+                // Loading indicator overlay
+                if (store.loading)
+                  Positioned.fill(
+                    child: Container(
+                      color: AppColors.bgLight.withValues(alpha: 0.75),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceWhite,
+                            border: Border.all(
+                                color: AppColors.borderBlack, width: 3),
+                            boxShadow: AppShadows.brutalBlack,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3,
+                                  color: AppColors.primaryRed,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Text(
+                                'SYNCING LEDGER...',
+                                style: AppText.labelBold(
+                                    13, AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
               ],
             );
           },
         ),
       ),
-      bottomNavigationBar: BottomNav(onAdd: _openAddExpense),
+      bottomNavigationBar: BottomNav(
+        currentIndex: _currentTab,
+        onTabSelected: (tab) => setState(() => _currentTab = tab),
+        onAdd: _openAddExpense,
+      ),
     );
   }
 
   Widget _header() {
     final store = widget.store;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+      decoration: const BoxDecoration(
+        color: AppColors.bgLight,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderBlack, width: 4),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Good morning,',
-                  style: AppText.label(13, AppColors.textMuted)),
-              const SizedBox(height: 1),
-              Text(store.userName, style: AppText.screenTitle),
-            ],
-          ),
           Row(
             children: [
-              // Notification bell button.
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.bgSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderFaint),
+                  color: AppColors.surfaceWhite,
+                  border: Border.all(color: AppColors.borderBlack, width: 2),
+                  boxShadow: AppShadows.brutalBlackSm,
                 ),
-                child: const Icon(Icons.notifications_none,
-                    size: 22, color: AppColors.textMuted),
+                child: const Icon(Icons.menu,
+                    size: 22, color: AppColors.textPrimary),
               ),
               const SizedBox(width: 12),
-              // Avatar with gold ring + initial.
-              GestureDetector(
-                onTap: widget.onSignOut == null ? null : _confirmSignOut,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.goldTint12,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.goldBorder, width: 1.5),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'EXPENSE_ROOT',
+                        style: AppText.headlineSm(color: AppColors.primaryRed),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Good morning,',
+                        style: AppText.label(11, AppColors.textSecondary,
+                            weight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        store.userName,
+                        style: AppText.labelBold(12, AppColors.textPrimary),
+                      ),
+                    ],
                   ),
-                  child: Text(store.userInitial,
-                      style: AppText.label(16, AppColors.gold,
-                          weight: FontWeight.w600)),
-                ),
+                ],
               ),
             ],
+          ),
+          GestureDetector(
+            onTap: widget.onSignOut == null ? null : _confirmSignOut,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primaryRed,
+                border: Border.all(color: AppColors.borderBlack, width: 2),
+                boxShadow: AppShadows.brutalBlackSm,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                store.userInitial,
+                style: AppText.labelBold(16, AppColors.onPrimary),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  /// Recent Entries section matching Stitch Raw Ledger
+  Widget _recentEntries(ExpenseStore store) {
+    final recent = store.expenses.take(4).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.only(bottom: 8),
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: AppColors.borderBlack, width: 3),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'RECENT ENTRIES',
+                style: AppText.labelBold(13, AppColors.textPrimary),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _currentTab = 2),
+                child: Text(
+                  'VIEW ALL ›',
+                  style: AppText.labelBold(12, AppColors.primaryRed),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        for (final expense in recent)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceWhite,
+              border: Border.all(color: AppColors.borderBlack, width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.borderBlack,
+                  offset: Offset(3, 3),
+                  blurRadius: 0,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer,
+                    border: Border.all(color: AppColors.borderBlack, width: 2),
+                  ),
+                  child: Icon(
+                    ExpenseCategory.fromValue(expense.categoryKey).icon,
+                    size: 20,
+                    color: AppColors.borderBlack,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (expense.vendor.isNotEmpty &&
+                                expense.vendor.toLowerCase() !=
+                                    expense.categoryKey.toLowerCase())
+                            ? '${expense.vendor.toUpperCase()} · ${expense.description.toUpperCase()}'
+                            : expense.description.toUpperCase(),
+                        style: AppText.bodyLg(color: AppColors.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        expense.date,
+                        style: AppText.label(11, AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '₹${store.formatInr(expense.amount.round())}',
+                  style: AppText.headlineSm(color: AppColors.textPrimary),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -167,18 +348,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final shouldSignOut = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.bgSurface,
-        title: Text('Sign out?', style: AppText.sectionTitle),
-        content: Text('You will need to sign in again.',
-            style: AppText.body(AppColors.textSecondary)),
+        backgroundColor: AppColors.surfaceWhite,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.zero,
+          side: BorderSide(color: AppColors.borderBlack, width: 3),
+        ),
+        title: Text('SIGN OUT', style: AppText.headlineSm()),
+        content: Text(
+          'You will need to sign in again to sync your expenses.',
+          style: AppText.body(AppColors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: AppText.label(14, AppColors.textMuted)),
+            child: Text('CANCEL',
+                style: AppText.labelBold(13, AppColors.textPrimary)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryRed,
+              foregroundColor: AppColors.onPrimary,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+                side: BorderSide(color: AppColors.borderBlack, width: 2),
+              ),
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Sign out', style: AppText.label(14, AppColors.gold)),
+            child: Text('SIGN OUT',
+                style: AppText.labelBold(13, AppColors.onPrimary)),
           ),
         ],
       ),

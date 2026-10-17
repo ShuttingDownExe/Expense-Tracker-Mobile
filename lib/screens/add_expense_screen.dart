@@ -7,9 +7,11 @@ import '../services/api_service.dart';
 import '../state/expense_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/numpad.dart';
+import 'qr_scanner_screen.dart';
 
-/// Screen 2 — log a new expense. Amount is entered via the custom numpad,
-/// a category is picked from the grid, and Save posts to the API.
+/// Screen 2 — Add Expense flow matching the Stitch Raw Ledger design:
+/// sharp 0px inputs, 4px/2px black borders, hard offset shadows,
+/// giant Anton currency display, brutal category chips, and custom numpad.
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key, required this.store});
 
@@ -23,18 +25,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   String _amount = '0';
   ExpenseCategory? _category;
   final _descController = TextEditingController();
+  final _vendorController = TextEditingController();
   bool _saving = false;
 
-  // The server stamps the date automatically (today, Asia/Kolkata), so the
-  // date shown here is informational only — there is no date picker.
-  final DateTime _date = DateTime.now();
-
+  DateTime _date = DateTime.now();
   static final _dateLabelFmt = DateFormat('MMM d yyyy');
   static final _apiDateFmt = DateFormat('yyyy-MM-dd');
 
   @override
   void dispose() {
     _descController.dispose();
+    _vendorController.dispose();
     super.dispose();
   }
 
@@ -46,7 +47,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       } else if (_amount == '0') {
         _amount = k;
       } else {
-        // Cap to two decimal places.
         final dot = _amount.indexOf('.');
         if (dot != -1 && _amount.length - dot > 2) return;
         _amount = '$_amount$k';
@@ -66,7 +66,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   double get _amountValue => double.tryParse(_amount) ?? 0;
-
   bool get _canSave => _amountValue > 0 && _category != null && !_saving;
 
   Future<void> _save() async {
@@ -74,17 +73,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     setState(() => _saving = true);
 
     final desc = _descController.text.trim();
+    final vendor = _vendorController.text.trim();
+    final resolvedVendor = vendor.isNotEmpty ? vendor : _category!.value;
     final expense = Expense(
       id: '',
-      // Local-only (preview display). The server stamps the real date.
       date: _apiDateFmt.format(_date),
-      // The API requires a non-empty description; fall back to the category.
       description: desc.isEmpty ? _category!.label : desc,
       amount: _amountValue,
-      // The API has no category field yet — the canonical category token is
-      // sent as the vendor (and is the model feature). Switch to a dedicated
-      // category field once the API supports one.
-      vendor: _category!.value,
+      vendor: resolvedVendor,
+      category: _category!.value,
     );
 
     try {
@@ -99,64 +96,96 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryRed,
+              onPrimary: AppColors.onPrimary,
+              surface: AppColors.surfaceWhite,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _date = picked);
+    }
+  }
+
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppColors.red),
+      SnackBar(
+        content: Text(msg, style: AppText.bodyLg(color: AppColors.onPrimary)),
+        backgroundColor: AppColors.primaryRed,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    final dateLabel = _isToday(_date)
+    final isToday = _apiDateFmt.format(_date) == _apiDateFmt.format(DateTime.now());
+    final dateLabel = isToday
         ? 'Today, ${_dateLabelFmt.format(_date)}'
         : _dateLabelFmt.format(_date);
 
     return Scaffold(
-      backgroundColor: AppColors.bgBlack,
+      backgroundColor: AppColors.bgLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Header + amount stay pinned so the running total is always
-            // visible while typing.
             _header(),
             _amountDisplay(store),
-            // Category grid (10 items) + fields scroll if the device is short.
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 0),
-                      child: _categoryGrid(),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-                      child: Column(
-                        children: [
-                          _descriptionField(),
-                          const SizedBox(height: 10),
-                          _dateField(dateLabel),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 12),
+                    _categoryGrid(),
+                    const SizedBox(height: 16),
+                    _vendorField(),
+                    const SizedBox(height: 12),
+                    _descriptionField(),
+                    const SizedBox(height: 12),
+                    _dateField(dateLabel),
+                    const SizedBox(height: 12),
                   ],
                 ),
               ),
             ),
-            // Numpad then Save pinned to the bottom.
-            SizedBox(
-              height: 244,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(22, 10, 22, 8),
-                child: Numpad(onKey: _onKey, onBackspace: _onBackspace),
+            // Bottom Numpad + Save Button
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+              decoration: const BoxDecoration(
+                color: AppColors.bgLight,
+                border: Border(
+                  top: BorderSide(color: AppColors.borderBlack, width: 4),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 0, 22, 12),
-              child: _saveButton(),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 220,
+                    child: Numpad(onKey: _onKey, onBackspace: _onBackspace),
+                  ),
+                  const SizedBox(height: 8),
+                  _saveButton(),
+                ],
+              ),
             ),
           ],
         ),
@@ -164,177 +193,205 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
+  Future<void> _openQrScanner() async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => QrScannerScreen(store: widget.store),
+      ),
+    );
+    if (result == true && mounted) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
   Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 14, 22, 0),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppColors.bgLight,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderBlack, width: 4),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _iconButton(
+          _brutalButton(
             icon: Icons.arrow_back,
-            iconColor: const Color(0xFF888888),
-            bg: AppColors.bgSurface,
-            border: AppColors.borderFaint,
             onTap: () => Navigator.of(context).pop(),
           ),
-          Text('New Expense',
-              style: AppText.label(17, AppColors.textPrimary,
-                  weight: FontWeight.w600)),
-          _iconButton(
-            icon: Icons.check,
-            iconColor: AppColors.gold,
-            bg: AppColors.goldTint10,
-            border: const Color(0xFFC9A84C).withValues(alpha: 0.25),
-            onTap: _canSave ? _save : null,
+          Text(
+            'NEW EXPENSE',
+            style: AppText.headlineSm(color: AppColors.textPrimary),
+          ),
+          _brutalButton(
+            icon: Icons.qr_code_scanner,
+            isPrimary: true,
+            onTap: _openQrScanner,
           ),
         ],
       ),
     );
   }
 
-  Widget _iconButton({
+  Widget _brutalButton({
     required IconData icon,
-    required Color iconColor,
-    required Color bg,
-    required Color border,
     VoidCallback? onTap,
+    bool isPrimary = false,
   }) {
+    final enabled = onTap != null;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border),
+      child: Opacity(
+        opacity: enabled ? 1.0 : 0.4,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isPrimary ? AppColors.primaryRed : AppColors.surfaceWhite,
+            border: Border.all(color: AppColors.borderBlack, width: 2),
+            boxShadow: AppShadows.brutalBlackSm,
+          ),
+          child: Icon(
+            icon,
+            size: 22,
+            color: isPrimary ? AppColors.onPrimary : AppColors.textPrimary,
+          ),
         ),
-        child: Icon(icon, size: 22, color: iconColor),
       ),
     );
   }
 
   Widget _amountDisplay(ExpenseStore store) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 20, 22, 0),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceWhite,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderBlack, width: 2),
+        ),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('ENTER AMOUNT',
-              style: AppText.label(10, AppColors.textGhost)
-                  .copyWith(letterSpacing: 2.5)),
-          const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'ENTER AMOUNT',
+                style: AppText.labelBold(11, AppColors.textSecondary),
+              ),
+              Text(
+                'BUDGET: ₹${store.formatInr(store.budget.round())}',
+                style: AppText.labelBold(11, AppColors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('₹',
-                  style: AppText.display(28)
-                      .copyWith(color: AppColors.goldDim, letterSpacing: 0)),
+              Text(
+                '₹',
+                style: AppText.displayCurrency(36,
+                    color: AppColors.primaryRed),
+              ),
               const SizedBox(width: 6),
-              Text(_displayAmount(), style: AppText.display(64)),
-              const SizedBox(width: 4),
-              const _BlinkingCursor(),
+              Expanded(
+                child: Text(
+                  _amount,
+                  style: AppText.displayCurrency(52,
+                      color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
-          ),
-          Container(
-            margin: const EdgeInsets.only(top: 14),
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                Colors.transparent,
-                AppColors.goldDim,
-                Colors.transparent,
-              ]),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Today's budget: ₹${store.formatInr(store.budget)} · "
-            'Used: ₹${store.formatInr(store.spentToday.round())}',
-            style: AppText.label(11, AppColors.textDark),
           ),
         ],
       ),
     );
-  }
-
-  String _displayAmount() {
-    // Group the integer part with Indian commas, keep any decimal suffix.
-    final parts = _amount.split('.');
-    final intPart = int.tryParse(parts[0]) ?? 0;
-    final grouped = NumberFormat.decimalPattern('en_IN').format(intPart);
-    return parts.length > 1 ? '$grouped.${parts[1]}' : grouped;
   }
 
   Widget _categoryGrid() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('CATEGORY',
-            style: AppText.label(10, AppColors.textGhost)
-                .copyWith(letterSpacing: 2.5)),
-        const SizedBox(height: 12),
-        LayoutBuilder(builder: (context, constraints) {
-          const gap = 10.0;
-          final w = (constraints.maxWidth - gap * 2) / 3;
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (final cat in ExpenseCategory.all)
-                _categoryButton(cat, w),
-            ],
-          );
-        }),
+        Text(
+          'CATEGORY',
+          style: AppText.labelBold(12, AppColors.textPrimary),
+        ),
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 8.0;
+            final itemWidth = (constraints.maxWidth - (gap * 2)) / 3;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final cat in ExpenseCategory.all)
+                  _categoryChip(cat, itemWidth),
+              ],
+            );
+          },
+        ),
       ],
     );
   }
 
-  Widget _categoryButton(ExpenseCategory cat, double width) {
-    final selected = _category?.label == cat.label;
+  Widget _categoryChip(ExpenseCategory cat, double width) {
+    final isSelected = _category?.value == cat.value;
+
     return GestureDetector(
       onTap: () => setState(() => _category = cat),
       child: Container(
         width: width,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? cat.color : AppColors.borderSubtle,
-            width: selected ? 1.5 : 1,
-          ),
+          color: isSelected ? AppColors.primaryRed : AppColors.surfaceWhite,
+          border: Border.all(color: AppColors.borderBlack, width: 2),
+          boxShadow: isSelected ? AppShadows.brutalBlackSm : const [],
         ),
         child: Column(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: cat.tintBg,
-                shape: BoxShape.circle,
-                border: Border.all(color: cat.tintBorder),
-              ),
-              child: Container(
-                width: 10,
-                height: 10,
-                decoration:
-                    BoxDecoration(color: cat.color, shape: BoxShape.circle),
-              ),
+            Icon(
+              cat.icon,
+              size: 22,
+              color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
             ),
-            const SizedBox(height: 8),
-            // Shrink-to-fit so long labels (e.g. "Entertainment") never
-            // overflow the button at larger type scales.
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(cat.label,
-                  maxLines: 1,
-                  style: AppText.label(12,
-                      selected ? AppColors.textPrimary : const Color(0xFF666666))),
+            const SizedBox(height: 4),
+            Text(
+              cat.label,
+              style: AppText.labelBold(
+                11,
+                isSelected ? AppColors.onPrimary : AppColors.textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vendorField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceWhite,
+        border: Border.all(color: AppColors.borderBlack, width: 2),
+        boxShadow: AppShadows.brutalBlackSm,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: TextField(
+        controller: _vendorController,
+        style: AppText.bodyLg(color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: 'MERCHANT / SHOP (OPTIONAL)',
+          hintStyle: AppText.labelBold(12, AppColors.textSecondary),
         ),
       ),
     );
@@ -342,67 +399,69 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   Widget _descriptionField() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        color: AppColors.surfaceWhite,
+        border: Border.all(color: AppColors.borderBlack, width: 2),
+        boxShadow: AppShadows.brutalBlackSm,
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.edit_outlined, size: 19, color: AppColors.textGhost),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: _descController,
-              style: AppText.body(AppColors.textPrimary),
-              cursorColor: AppColors.gold,
-              maxLength: 100, // API caps description at 100 chars
-              decoration: InputDecoration(
-                isCollapsed: true,
-                counterText: '',
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                border: InputBorder.none,
-                hintText: 'Description (optional)',
-                hintStyle: AppText.body(AppColors.textDark),
-              ),
-            ),
-          ),
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: TextField(
+        controller: _descController,
+        style: AppText.bodyLg(color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: 'NOTES / DETAILS (OPTIONAL)',
+          hintStyle: AppText.labelBold(12, AppColors.textSecondary),
+        ),
       ),
     );
   }
 
-  // Date is server-assigned (today), so this row is informational only.
   Widget _dateField(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 19, color: AppColors.textGhost),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(label,
+    return GestureDetector(
+      onTap: _pickDate,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          border: Border.all(color: AppColors.borderBlack, width: 2),
+          boxShadow: AppShadows.brutalBlackSm,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today, size: 18, color: AppColors.textPrimary),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      label.toUpperCase(),
+                      style: AppText.labelBold(12, AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.body(AppColors.textPrimary)),
-                ),
-              ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Text('Auto',
-              style: AppText.label(12, AppColors.textGhost)),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              color: AppColors.primaryRed,
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_calendar, size: 14, color: AppColors.onPrimary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'CHANGE',
+                    style: AppText.labelBold(10, AppColors.onPrimary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -411,78 +470,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     return GestureDetector(
       onTap: _canSave ? _save : null,
       child: Opacity(
-        opacity: _canSave ? 1 : 0.5,
+        opacity: _canSave ? 1.0 : 0.45,
         child: Container(
-          height: 52,
+          height: 48,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.gold,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: const Color(0xFFC9A84C).withValues(alpha: 0.25),
-                  blurRadius: 28,
-                  offset: const Offset(0, 8)),
-            ],
+            color: AppColors.primaryRed,
+            border: Border.all(color: AppColors.borderBlack, width: 3),
+            boxShadow: _canSave ? AppShadows.brutalBlackSm : const [],
           ),
           child: _saving
               ? const SizedBox(
-                  width: 22,
-                  height: 22,
+                  width: 20,
+                  height: 20,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.black))
-              : Text('Save Expense',
-                  style: AppText.label(16, Colors.black,
-                          weight: FontWeight.w600)
-                      .copyWith(letterSpacing: 0.5)),
-        ),
-      ),
-    );
-  }
-
-  bool _isToday(DateTime d) {
-    final now = DateTime.now();
-    return d.year == now.year && d.month == now.month && d.day == now.day;
-  }
-}
-
-/// The 3×52pt blinking gold cursor next to the amount.
-class _BlinkingCursor extends StatefulWidget {
-  const _BlinkingCursor();
-
-  @override
-  State<_BlinkingCursor> createState() => _BlinkingCursorState();
-}
-
-class _BlinkingCursorState extends State<_BlinkingCursor>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: Container(
-        width: 3,
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.gold,
-          borderRadius: BorderRadius.circular(2),
+                    strokeWidth: 3,
+                    color: AppColors.onPrimary,
+                  ),
+                )
+              : Text(
+                  'SAVE EXPENSE',
+                  style: AppText.headlineSm(color: AppColors.onPrimary),
+                ),
         ),
       ),
     );

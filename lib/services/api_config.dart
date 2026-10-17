@@ -36,6 +36,6 @@ class ApiConfig {
   }
 
   /// Client-side daily budget. The API has no budget concept, so this lives
-  /// in the app (matches the design's ₹5,000 default).
-  static const double dailyBudget = 5000;
+  /// in the app (matches the ₹500 default).
+  static const double dailyBudget = 500;
 }

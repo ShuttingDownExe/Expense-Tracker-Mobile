@@ -12,6 +12,19 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
+/// Result of paginated expenses query.
+class PaginatedExpenses {
+  final List<Expense> expenses;
+  final int? nextCursor;
+  final bool hasMore;
+
+  const PaginatedExpenses({
+    required this.expenses,
+    this.nextCursor,
+    this.hasMore = false,
+  });
+}
+
 /// Supplies a fresh Firebase ID token for each request. Returning null means
 /// "no auth" (preview mode). Implemented by [AuthService] in the live app and
 /// stubbed in tests.
@@ -40,10 +53,17 @@ class ApiService {
 
   Uri _uri(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
 
-  /// GET /api/expenses — the API returns `{ data: [ {id, …}, … ], metaData }`
-  /// (paginated, newest first), where each item carries its own `id` field.
-  Future<List<Expense>> fetchExpenses() async {
-    final res = await _client.get(_uri('/expenses'), headers: await _headers());
+  /// GET /api/expenses — supports pagination via `limit` and `cursor`.
+  Future<PaginatedExpenses> fetchExpensesPaged({
+    int limit = 20,
+    int? cursor,
+  }) async {
+    final queryParams = <String, String>{
+      'limit': limit.toString(),
+      if (cursor != null) 'cursor': cursor.toString(),
+    };
+    final uri = _uri('/expenses').replace(queryParameters: queryParams);
+    final res = await _client.get(uri, headers: await _headers());
     if (res.statusCode != 200) {
       throw ApiException('Failed to fetch expenses',
           statusCode: res.statusCode);
@@ -52,10 +72,51 @@ class ApiService {
     final list = (body is Map && body['data'] is List)
         ? body['data'] as List
         : const [];
-    return list.map((item) {
+    final expenses = list.map((item) {
       final map = Map<String, dynamic>.from(item as Map);
       return Expense.fromJson((map['id'] as String?) ?? '', map);
     }).toList();
+
+    final meta = (body is Map && body['metaData'] is Map)
+        ? body['metaData'] as Map
+        : null;
+    final nextCursor = meta?['nextCursor'] as int?;
+    final hasMore = meta?['hasMore'] as bool? ?? false;
+
+    return PaginatedExpenses(
+      expenses: expenses,
+      nextCursor: nextCursor,
+      hasMore: hasMore,
+    );
+  }
+
+  /// GET /api/expenses — returns all (first batch) expenses.
+  Future<List<Expense>> fetchExpenses() async {
+    final paged = await fetchExpensesPaged(limit: 50);
+    return paged.expenses;
+  }
+
+  /// GET /api/user/budget — returns user configured daily budget.
+  Future<double> fetchDailyBudget() async {
+    final res = await _client.get(_uri('/user/budget'), headers: await _headers());
+    if (res.statusCode != 200) return ApiConfig.dailyBudget;
+    final json = Map<String, dynamic>.from(jsonDecode(res.body) as Map);
+    return (json['dailyBudget'] as num?)?.toDouble() ?? ApiConfig.dailyBudget;
+  }
+
+  /// PUT /api/user/budget — updates user configured daily budget.
+  Future<double> updateDailyBudget(double dailyBudget) async {
+    final res = await _client.put(
+      _uri('/user/budget'),
+      headers: await _headers(),
+      body: jsonEncode({'dailyBudget': dailyBudget}),
+    );
+    if (res.statusCode != 200) {
+      throw ApiException('Failed to update daily budget',
+          statusCode: res.statusCode);
+    }
+    final json = Map<String, dynamic>.from(jsonDecode(res.body) as Map);
+    return (json['dailyBudget'] as num?)?.toDouble() ?? dailyBudget;
   }
 
   /// POST /api/expenses — creates an expense and returns it with its new id.

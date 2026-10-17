@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// 3×4 custom numeric keypad (1–9, ., 0, ⌫) that drives the amount entry on
-/// the add-expense screen.
-///
-/// Built from nested [Expanded] rows/columns (rather than a GridView) so that
-/// all twelve keys always lay out and fit whatever height the parent gives —
-/// no row gets clipped on shorter screens.
+/// 3×4 Neo-Brutalist numeric keypad (1–9, ., 0, ⌫) for amount entry:
+/// sharp 0px corners, 2px solid black borders, and 3px hard black offset shadows.
 class Numpad extends StatelessWidget {
   const Numpad({
     super.key,
@@ -14,7 +10,6 @@ class Numpad extends StatelessWidget {
     required this.onBackspace,
   });
 
-  /// Called with the tapped character ('0'–'9' or '.').
   final ValueChanged<String> onKey;
   final VoidCallback onBackspace;
 
@@ -52,22 +47,35 @@ class Numpad extends StatelessWidget {
 
   Widget _key(String label) {
     final onTap = label == '⌫' ? onBackspace : () => onKey(label);
-    return Material(
-      color: AppColors.bgSurface,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.bgSurface2),
+    final isBackspace = label == '⌫';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isBackspace ? AppColors.surfaceContainer : AppColors.surfaceWhite,
+        borderRadius: BorderRadius.zero,
+        border: Border.all(color: AppColors.borderBlack, width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.borderBlack,
+            offset: Offset(3, 3),
+            blurRadius: 0,
+            spreadRadius: 0,
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: AppText.label(22, AppColors.textPrimary,
-                weight: FontWeight.w300),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: AppColors.primaryRed.withValues(alpha: 0.2),
+          child: Container(
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              style: isBackspace
+                  ? const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)
+                  : AppText.headlineSm(color: AppColors.textPrimary),
+            ),
           ),
         ),
       ),
